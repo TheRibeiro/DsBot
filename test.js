@@ -38,15 +38,6 @@ function validateMatchPayload(payload) {
     const errors = [];
 
     if (!payload.match_id) errors.push('match_id obrigatório');
-    if (!Array.isArray(payload.team_a)) errors.push('team_a deve ser array');
-    if (!Array.isArray(payload.team_b)) errors.push('team_b deve ser array');
-
-    // Verificar discord_id
-    [...(payload.team_a || []), ...(payload.team_b || [])].forEach(player => {
-        if (!player.discord_id) {
-            errors.push(`Jogador ${player.nickname || player.id} sem discord_id`);
-        }
-    });
 
     return errors;
 }
@@ -55,12 +46,12 @@ function validateMatchPayload(payload) {
 const validPayload = {
     match_id: 456,
     team_a: [
-        { id: 1, nickname: 'Player1', discord_id: '123456789' },
-        { id: 2, nickname: 'Player2', discord_id: '987654321' }
+        { id: 1, nickname: 'Player1' },
+        { id: 2, nickname: 'Player2' }
     ],
     team_b: [
-        { id: 3, nickname: 'Player3', discord_id: '111222333' },
-        { id: 4, nickname: 'Player4', discord_id: '444555666' }
+        { id: 3, nickname: 'Player3' },
+        { id: 4, nickname: 'Player4' }
     ],
     captain_a: { id: 1, nickname: 'Player1' },
     captain_b: { id: 3, nickname: 'Player3' },
@@ -72,11 +63,7 @@ console.log('✅ Payload válido:', errors1.length === 0);
 
 // Payload inválido (sem discord_id)
 const invalidPayload = {
-    match_id: 789,
-    team_a: [
-        { id: 1, nickname: 'Player1' }, // SEM discord_id
-        { id: 2, nickname: 'Player2', discord_id: '987654321' }
-    ],
+    team_a: [],
     team_b: []
 };
 

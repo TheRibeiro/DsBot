@@ -4,7 +4,7 @@
  */
 
 require('dotenv').config();
-const { Client, GatewayIntentBits, PermissionFlagsBits, ChannelType, Events } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, Events } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -159,43 +159,20 @@ class DiscordMatchBot {
     }
 
     async createMatchChannels(matchData) {
-        const { match_id, team_a, team_b, captain_a, captain_b, expires_at } = matchData;
+        const { match_id, expires_at } = matchData;
+
+        // Apenas precisamos do ID da partida para nomear os canais
+        if (!match_id) {
+            throw new Error('match_id é obrigatório');
+        }
 
         Logger.info(`🎮 Criando canais para Match #${match_id}`);
 
         try {
-            // Validar dados obrigatórios
-            if (!team_a || !team_b || !Array.isArray(team_a) || !Array.isArray(team_b)) {
-                throw new Error('Times A e B devem ser arrays de jogadores');
-            }
+            const channelA = await this.createVoiceChannel(`Partida #${match_id} | Time A`);
+            const channelB = await this.createVoiceChannel(`Partida #${match_id} | Time B`);
 
-            // Validar discord_id
-            const missingDiscordIds = [];
-            [...team_a, ...team_b].forEach(player => {
-                if (!player.discord_id) {
-                    missingDiscordIds.push(player.nickname || player.id);
-                }
-            });
-
-            if (missingDiscordIds.length > 0) {
-                throw new Error(`Jogadores sem discord_id: ${missingDiscordIds.join(', ')}`);
-            }
-
-            // Criar canal Team A
-            const channelA = await this.createVoiceChannel(
-                `Partida #${match_id} | Time A`,
-                team_a,
-                captain_a
-            );
-
-            // Criar canal Team B
-            const channelB = await this.createVoiceChannel(
-                `Partida #${match_id} | Time B`,
-                team_b,
-                captain_b
-            );
-
-            // Salvar no banco
+            // Salvar no “banco” (arquivo JSON)
             this.db.saveMatch(match_id, channelA.id, channelB.id, expires_at);
 
             Logger.info(`✅ Canais criados para Match #${match_id}`);
@@ -217,51 +194,13 @@ class DiscordMatchBot {
         }
     }
 
-    async createVoiceChannel(name, players, captain) {
-        // Criar canal de voz
+    async createVoiceChannel(name) {
+        // Criar canal de voz herdando permissões da categoria
         const channel = await this.guild.channels.create({
             name,
             type: ChannelType.GuildVoice,
-            parent: this.category.id,
-            permissionOverwrites: [
-                // Negar acesso para @everyone
-                {
-                    id: this.guild.id,
-                    deny: [PermissionFlagsBits.Connect, PermissionFlagsBits.Speak]
-                }
-            ]
+            parent: this.category.id
         });
-
-        // Adicionar permissões para cada jogador
-        for (const player of players) {
-            try {
-                const discordId = player.discord_id.toString();
-
-                // Permissões base
-                const permissions = [
-                    PermissionFlagsBits.Connect,
-                    PermissionFlagsBits.Speak,
-                    PermissionFlagsBits.UseVAD
-                ];
-
-                // Capitão tem priority speaker
-                if (captain && player.id === captain.id) {
-                    permissions.push(PermissionFlagsBits.PrioritySpeaker);
-                }
-
-                await channel.permissionOverwrites.create(discordId, {
-                    Connect: true,
-                    Speak: true,
-                    UseVAD: true,
-                    PrioritySpeaker: captain && player.id === captain.id
-                });
-
-                Logger.debug(`  ✅ Permissões adicionadas: ${player.nickname} (${discordId})`);
-
-            } catch (error) {
-                Logger.warn(`  ⚠️ Erro ao adicionar permissões para ${player.nickname}:`, error.message);
-            }
-        }
 
         return channel;
     }
