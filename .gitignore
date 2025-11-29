@@ -8,6 +8,7 @@
 *.sqlite
 *.sqlite3
 match_channels.db
+match_channels.json
 
 # Node
 node_modules/

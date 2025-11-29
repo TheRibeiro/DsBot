@@ -6,7 +6,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, PermissionFlagsBits, ChannelType } = require('discord.js');
 const express = require('express');
-const Database = require('better-sqlite3');
+const fs = require('fs');
+const path = require('path');
 const { Logger } = require('./logger');
 
 // ==================== CONFIGURAÇÃO ====================
@@ -40,52 +41,71 @@ function validateConfig() {
 
 class MatchChannelDB {
     constructor() {
-        this.db = new Database('match_channels.db');
+        this.dbFile = path.join(__dirname, 'match_channels.json');
+        this.data = { match_channels: [] };
         this.init();
     }
 
     init() {
-        this.db.exec(`
-            CREATE TABLE IF NOT EXISTS match_channels (
-                match_id INTEGER PRIMARY KEY,
-                team_a_channel_id TEXT NOT NULL,
-                team_b_channel_id TEXT NOT NULL,
-                created_at INTEGER NOT NULL,
-                expires_at INTEGER,
-                status TEXT DEFAULT 'ACTIVE'
-            )
-        `);
-        Logger.info('✅ Database inicializado');
+        try {
+            if (fs.existsSync(this.dbFile)) {
+                const raw = fs.readFileSync(this.dbFile, 'utf-8');
+                const parsed = raw ? JSON.parse(raw) : {};
+                this.data = { match_channels: parsed.match_channels || [] };
+            } else {
+                this.persist();
+            }
+            Logger.info('DB inicializado (arquivo JSON)');
+        } catch (error) {
+            Logger.error('Erro ao carregar DB, recriando arquivo:', error.message);
+            this.data = { match_channels: [] };
+            this.persist();
+        }
+    }
+
+    persist() {
+        fs.writeFileSync(this.dbFile, JSON.stringify(this.data, null, 2));
     }
 
     saveMatch(matchId, teamAChannelId, teamBChannelId, expiresAt) {
-        const stmt = this.db.prepare(`
-            INSERT INTO match_channels (match_id, team_a_channel_id, team_b_channel_id, created_at, expires_at)
-            VALUES (?, ?, ?, ?, ?)
-        `);
+        const match = {
+            match_id: matchId,
+            team_a_channel_id: teamAChannelId,
+            team_b_channel_id: teamBChannelId,
+            created_at: Date.now(),
+            expires_at: expiresAt,
+            status: 'ACTIVE'
+        };
 
-        stmt.run(matchId, teamAChannelId, teamBChannelId, Date.now(), expiresAt);
-        Logger.info(`💾 Match #${matchId} salvo no DB`);
+        // Substituir se ja existir
+        this.data.match_channels = this.data.match_channels.filter(m => m.match_id !== matchId);
+        this.data.match_channels.push(match);
+        this.persist();
+
+        Logger.info(`Match #${matchId} salvo no DB`);
     }
 
     getMatch(matchId) {
-        const stmt = this.db.prepare('SELECT * FROM match_channels WHERE match_id = ? AND status = "ACTIVE"');
-        return stmt.get(matchId);
+        return this.data.match_channels.find(m => m.match_id === matchId && m.status === 'ACTIVE');
     }
 
     getExpiredMatches() {
         const now = Date.now();
-        const stmt = this.db.prepare('SELECT * FROM match_channels WHERE expires_at < ? AND status = "ACTIVE"');
-        return stmt.all(now);
+        return this.data.match_channels.filter(
+            m => m.status === 'ACTIVE' && typeof m.expires_at === 'number' && m.expires_at < now
+        );
     }
 
     markAsDeleted(matchId) {
-        const stmt = this.db.prepare('UPDATE match_channels SET status = "DELETED" WHERE match_id = ?');
-        stmt.run(matchId);
+        const match = this.data.match_channels.find(m => m.match_id === matchId);
+        if (match) {
+            match.status = 'DELETED';
+            this.persist();
+        }
     }
 
     close() {
-        this.db.close();
+        this.persist();
     }
 }
 
@@ -461,11 +481,13 @@ async function main() {
     });
 }
 
-// Executar
-main().catch(error => {
-    Logger.error('❌ Erro fatal:', error);
-    process.exit(1);
-});
+// Executar somente quando chamado diretamente
+if (require.main === module) {
+    main().catch(error => {
+        Logger.error('Erro fatal:', error);
+        process.exit(1);
+    });
+}
 
 // Export para testes
 module.exports = { DiscordMatchBot, MatchChannelDB };
