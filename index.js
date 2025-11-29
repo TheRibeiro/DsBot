@@ -4,7 +4,7 @@
  */
 
 require('dotenv').config();
-const { Client, GatewayIntentBits, PermissionFlagsBits, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, PermissionFlagsBits, ChannelType, Events } = require('discord.js');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -129,9 +129,9 @@ class DiscordMatchBot {
     }
 
     setupEventHandlers() {
-        this.client.once('ready', () => this.onReady());
-        this.client.on('voiceStateUpdate', (oldState, newState) => this.onVoiceStateUpdate(oldState, newState));
-        this.client.on('interactionCreate', interaction => this.onInteraction(interaction));
+        this.client.once(Events.ClientReady, () => this.onReady());
+        this.client.on(Events.VoiceStateUpdate, (oldState, newState) => this.onVoiceStateUpdate(oldState, newState));
+        this.client.on(Events.InteractionCreate, interaction => this.onInteraction(interaction));
     }
 
     async onReady() {
