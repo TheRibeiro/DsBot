@@ -16,7 +16,7 @@ const config = {
     token: process.env.DISCORD_TOKEN,
     guildId: process.env.GUILD_ID,
     categoryId: process.env.VOICE_CATEGORY_ID,
-    webhookPort: parseInt(process.env.WEBHOOK_PORT || '3001'),
+    webhookPort: parseInt(process.env.WEBHOOK_PORT || process.env.PORT || '3001'),
     webhookSecret: process.env.WEBHOOK_SECRET,
     botPrefix: process.env.BOT_PREFIX || '/',
     channelLifetime: parseInt(process.env.CHANNEL_LIFETIME_MINUTES || '120'),
