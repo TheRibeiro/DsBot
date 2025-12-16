@@ -67,9 +67,6 @@ class ExtendedRematchBot extends DiscordMatchBot {
             ]
         });
 
-        // Slash commands collection
-        this.client.commands = new Collection();
-
         // Re-setup handlers with new client
         this.setupEventHandlers();
 
@@ -81,6 +78,11 @@ class ExtendedRematchBot extends DiscordMatchBot {
     }
 
     setupEventHandlers() {
+        // Inicializar Collection de comandos (precisa ser aqui, depois do client estar pronto)
+        if (!this.client.commands) {
+            this.client.commands = new Collection();
+        }
+
         this.client.once(Events.ClientReady, () => this.onExtendedReady());
         this.client.on(Events.VoiceStateUpdate, (oldState, newState) => this.onVoiceStateUpdate(oldState, newState));
         this.client.on(Events.InteractionCreate, interaction => this.onInteraction(interaction));
