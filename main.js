@@ -45,6 +45,9 @@ const extendedConfig = {
     reportSyncMode: process.env.REPORT_SYNC_MODE || 'webhook', // 'webhook' or 'polling'
     auditPollInterval: parseInt(process.env.AUDIT_POLL_INTERVAL_MS || '30000'),
 
+    // Commands
+    botPrefix: process.env.BOT_PREFIX || '!',
+
     // Core
     webhookSecret: process.env.WEBHOOK_SECRET,
     webhookPort: parseInt(process.env.WEBHOOK_PORT || process.env.PORT || '3001'),
@@ -87,36 +90,66 @@ class ExtendedRematchBot extends DiscordMatchBot {
         this.client.on(Events.VoiceStateUpdate, (oldState, newState) => this.onVoiceStateUpdate(oldState, newState));
         this.client.on(Events.InteractionCreate, interaction => this.onInteraction(interaction));
 
-        // Load slash commands
-        this.loadSlashCommands();
+        // NEW: Handler para comandos com prefixo (!)
+        this.client.on(Events.MessageCreate, message => this.onMessageCommand(message));
+
+        // Load prefix commands
+        this.loadPrefixCommands();
     }
 
     /**
-     * Carrega todos os comandos slash da pasta src/commands
+     * Carrega todos os comandos com prefixo da pasta src/commands
      */
-    loadSlashCommands() {
+    loadPrefixCommands() {
         const commandsPath = path.join(__dirname, 'src', 'commands');
 
         // Verificar se a pasta existe
         if (!fs.existsSync(commandsPath)) {
-            Logger.warn('⚠️ Pasta de comandos não encontrada, comandos slash desabilitados');
+            Logger.warn('⚠️ Pasta de comandos não encontrada, comandos desabilitados');
             return;
         }
 
         const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
 
-        Logger.info(`📦 Carregando ${commandFiles.length} comandos slash...`);
+        Logger.info(`📦 Carregando ${commandFiles.length} comandos...`);
 
         for (const file of commandFiles) {
             const filePath = path.join(commandsPath, file);
             const command = require(filePath);
 
-            if ('data' in command && 'execute' in command) {
-                this.client.commands.set(command.data.name, command);
-                Logger.info(`  ✅ Comando carregado: /${command.data.name}`);
+            if ('name' in command && 'execute' in command) {
+                this.client.commands.set(command.name, command);
+                Logger.info(`  ✅ Comando carregado: !${command.name}`);
             } else {
-                Logger.warn(`  ⚠️ Comando ignorado: ${file} (falta 'data' ou 'execute')`);
+                Logger.warn(`  ⚠️ Comando ignorado: ${file} (falta 'name' ou 'execute')`);
             }
+        }
+    }
+
+    /**
+     * Handler de comandos com prefixo (!)
+     */
+    async onMessageCommand(message) {
+        // Ignorar bots
+        if (message.author.bot) return;
+
+        // Verificar se começa com o prefixo
+        const prefix = extendedConfig.botPrefix || '!';
+        if (!message.content.startsWith(prefix)) return;
+
+        // Extrair comando e argumentos
+        const args = message.content.slice(prefix.length).trim().split(/ +/);
+        const commandName = args.shift().toLowerCase();
+
+        // Buscar comando
+        const command = this.client.commands.get(commandName);
+        if (!command) return;
+
+        try {
+            await command.execute(message, args);
+        } catch (error) {
+            Logger.error(`❌ Erro ao executar comando !${commandName}:`, error);
+            await message.reply('❌ Ocorreu um erro ao executar este comando.').catch(() => {});
         }
     }
 

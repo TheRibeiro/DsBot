@@ -1,11 +1,16 @@
 /**
- * Comando /perfil - Exibe card premium de perfil do jogador
+ * Comando !perfil - Exibe card premium de perfil do jogador
  *
  * Design visual impactante estilo Faceit/GamersClub
  * Usa Canvas para gerar imagem com glassmorphism e gradientes
+ *
+ * Uso:
+ *   !perfil              → Ver próprio perfil
+ *   !perfil @usuario     → Ver perfil de outro jogador
+ *   !perfil 123456789    → Ver perfil por Discord ID
  */
 
-const { SlashCommandBuilder, AttachmentBuilder } = require('discord.js');
+const { AttachmentBuilder } = require('discord.js');
 const { ProfileCardGenerator } = require('../services/imageGenerator');
 const { Logger } = require('../../logger');
 const mysql = require('mysql2/promise');
@@ -29,7 +34,7 @@ let dbPool = null;
 function initDatabase() {
     if (!dbPool) {
         dbPool = mysql.createPool(dbConfig);
-        Logger.info('✅ Database pool criado para comando /perfil');
+        Logger.info('✅ Database pool criado para comando !perfil');
     }
     return dbPool;
 }
@@ -170,33 +175,38 @@ async function fetchUserData(discordId) {
 }
 
 module.exports = {
-    data: new SlashCommandBuilder()
-        .setName('perfil')
-        .setDescription('Exibe seu perfil premium de jogador com estatísticas')
-        .addUserOption(option =>
-            option
-                .setName('usuario')
-                .setDescription('Usuário para ver o perfil (deixe vazio para ver o seu)')
-                .setRequired(false)
-        ),
+    name: 'perfil',
+    description: 'Exibe seu perfil premium de jogador com estatísticas',
+    aliases: ['profile', 'stats', 'me'],
 
-    async execute(interaction) {
-        await interaction.deferReply();
-
+    async execute(message, args) {
         try {
             // Determinar qual usuário exibir
-            const targetUser = interaction.options.getUser('usuario') || interaction.user;
+            let targetUser = message.author;
 
-            Logger.info(`📊 Comando /perfil executado por ${interaction.user.tag} para ver ${targetUser.tag}`);
+            // Se mencionou alguém
+            if (message.mentions.users.size > 0) {
+                targetUser = message.mentions.users.first();
+            }
+            // Se passou um Discord ID
+            else if (args.length > 0 && /^\d+$/.test(args[0])) {
+                try {
+                    targetUser = await message.client.users.fetch(args[0]);
+                } catch (error) {
+                    return message.reply('❌ Usuário não encontrado com esse ID.');
+                }
+            }
+
+            Logger.info(`📊 Comando !perfil executado por ${message.author.tag} para ver ${targetUser.tag}`);
+
+            // Enviar "carregando..."
+            const loadingMsg = await message.reply('🎨 Gerando seu perfil premium...');
 
             // Buscar dados do usuário no banco
             const userData = await fetchUserData(targetUser.id);
 
             if (!userData) {
-                return await interaction.editReply({
-                    content: `❌ **${targetUser.username}** não está registrado no sistema Inhouse.\n\nPara se registrar, acesse o site e vincule sua conta do Discord.`,
-                    ephemeral: true
-                });
+                return loadingMsg.edit(`❌ **${targetUser.username}** não está registrado no sistema Inhouse.\n\nPara se registrar, acesse o site e vincule sua conta do Discord.`);
             }
 
             // Gerar card de perfil
@@ -224,22 +234,20 @@ module.exports = {
             const attachment = new AttachmentBuilder(imageBuffer, { name: 'profile.png' });
 
             // Enviar card
-            await interaction.editReply({
+            await loadingMsg.edit({
+                content: `📊 **Perfil de ${targetUser.username}**`,
                 files: [attachment]
             });
 
             Logger.info(`✅ Card enviado com sucesso para ${targetUser.tag}`);
 
         } catch (error) {
-            Logger.error('❌ Erro ao executar comando /perfil:', error);
+            Logger.error('❌ Erro ao executar comando !perfil:', error);
 
             try {
-                await interaction.editReply({
-                    content: '❌ Ocorreu um erro ao gerar seu perfil. Tente novamente mais tarde.',
-                    ephemeral: true
-                });
-            } catch (editError) {
-                Logger.error('❌ Erro ao editar reply:', editError.message);
+                await message.reply('❌ Ocorreu um erro ao gerar o perfil. Tente novamente mais tarde.');
+            } catch (replyError) {
+                Logger.error('❌ Erro ao enviar mensagem de erro:', replyError.message);
             }
         }
     }
