@@ -77,8 +77,8 @@ class MatchChannelDB {
             status: 'ACTIVE'
         };
 
-        // Substituir se ja existir
-        this.data.match_channels = this.data.match_channels.filter(m => m.match_id !== matchId);
+        // Substituir se ja existir (usando == para evitar erro de tipo string/int)
+        this.data.match_channels = this.data.match_channels.filter(m => m.match_id != matchId);
         this.data.match_channels.push(match);
         this.persist();
 
@@ -86,7 +86,7 @@ class MatchChannelDB {
     }
 
     getMatch(matchId) {
-        return this.data.match_channels.find(m => m.match_id === matchId && m.status === 'ACTIVE');
+        return this.data.match_channels.find(m => m.match_id == matchId && m.status === 'ACTIVE');
     }
 
     getExpiredMatches() {
@@ -97,7 +97,7 @@ class MatchChannelDB {
     }
 
     markAsDeleted(matchId) {
-        const match = this.data.match_channels.find(m => m.match_id === matchId);
+        const match = this.data.match_channels.find(m => m.match_id == matchId);
         if (match) {
             match.status = 'DELETED';
             this.persist();
@@ -167,6 +167,7 @@ class DiscordMatchBot {
         }
 
         Logger.info(`🎮 Criando canais para Match #${match_id}`);
+        Logger.info(`📦 Payload recebido: ${JSON.stringify(matchData)}`);
 
         try {
             const channelA = await this.createVoiceChannel(`Partida #${match_id} | Time A`);
