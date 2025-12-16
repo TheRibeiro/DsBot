@@ -293,9 +293,15 @@ class ProfileCardGenerator {
         const textX = avatarX + avatarSize + 30;
         let currentY = avatarY;
 
-        ctx.font = 'bold 36px Arial, sans-serif';
+        // TESTE: Fundo vermelho para ver se o texto está sendo renderizado
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+        ctx.fillRect(textX, currentY, 400, 40);
+
+        ctx.font = 'bold 36px sans-serif';
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(`${username}`, textX, currentY);
+        ctx.fillText(username || 'TESTE', textX, currentY);
+
+        console.log(`📝 Desenhando username: "${username}" em (${textX}, ${currentY})`);
 
         if (discriminator && discriminator !== '0') {
             ctx.font = '24px Arial, sans-serif';
