@@ -1,14 +1,16 @@
 {
   "name": "rematch-discord-bot",
-  "version": "1.0.0",
-  "description": "Bot Discord para criar salas de voz automáticas para partidas",
-  "main": "index.js",
+  "version": "1.1.0",
+  "description": "Bot Discord para partidas + integração com denúncias e audit logs",
+  "main": "main.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
+    "start": "node main.js",
+    "start:basic": "node index.js",
+    "dev": "nodemon main.js",
+    "dev:basic": "nodemon index.js",
     "test": "node test.js"
   },
-  "keywords": ["discord", "bot", "voice", "matches"],
+  "keywords": ["discord", "bot", "voice", "matches", "tickets", "audit"],
   "author": "",
   "license": "ISC",
   "dependencies": {
