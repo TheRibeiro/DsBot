@@ -116,7 +116,6 @@ async function fetchUserData(discordId) {
                 u.nickname,
                 u.discord_id,
                 u.mmr,
-                u.main_role,
                 u.position,
                 COUNT(DISTINCT CASE WHEN mp.team = 'A' AND m.winner = 'A' THEN m.id
                                    WHEN mp.team = 'B' AND m.winner = 'B' THEN m.id END) as wins,
@@ -164,12 +163,22 @@ async function fetchUserData(discordId) {
             losses: user.losses,
             winrate,
             kda,
-            mainRole: user.main_role || user.position || null,
+            mainRole: user.position || null,
             progressPercent: rank.percent_in_division
         };
 
     } catch (error) {
         Logger.error('❌ Erro ao buscar dados do usuário:', error.message);
+
+        // Erro de conexão ao banco
+        if (error.code === 'ECONNREFUSED') {
+            Logger.error('💡 Não foi possível conectar ao banco de dados.');
+            Logger.error(`💡 Verifique as variáveis de ambiente: DB_HOST=${dbConfig.host}, DB_USER=${dbConfig.user}, DB_NAME=${dbConfig.database}`);
+            const dbError = new Error('DATABASE_CONNECTION_ERROR');
+            dbError.userMessage = '❌ Erro ao conectar ao banco de dados. Entre em contato com um administrador.';
+            throw dbError;
+        }
+
         throw error;
     }
 }
@@ -244,8 +253,15 @@ module.exports = {
         } catch (error) {
             Logger.error('❌ Erro ao executar comando !perfil:', error);
 
+            // Mensagem específica para erro de banco
+            const errorMsg = error.userMessage || '❌ Ocorreu um erro ao gerar o perfil. Tente novamente mais tarde.';
+
             try {
-                await message.reply('❌ Ocorreu um erro ao gerar o perfil. Tente novamente mais tarde.');
+                if (loadingMsg) {
+                    await loadingMsg.edit(errorMsg);
+                } else {
+                    await message.reply(errorMsg);
+                }
             } catch (replyError) {
                 Logger.error('❌ Erro ao enviar mensagem de erro:', replyError.message);
             }
