@@ -132,21 +132,35 @@ async function fetchUserData(discordId) {
 
         const user = rows[0];
 
+        // LOG: Dados retornados do banco
+        Logger.info(`📊 Dados do banco para ${user.nickname}:`);
+        Logger.info(`   - ID: ${user.id}`);
+        Logger.info(`   - Discord ID: ${user.discord_id}`);
+        Logger.info(`   - MMR: ${user.mmr} (type: ${typeof user.mmr})`);
+        Logger.info(`   - Position: ${user.position}`);
+        Logger.info(`   - Wins: ${user.wins} (type: ${typeof user.wins})`);
+        Logger.info(`   - Losses: ${user.losses} (type: ${typeof user.losses})`);
+
         // Calcular estatísticas
-        const totalGames = user.wins + user.losses;
-        const winrate = totalGames > 0 ? Math.round((user.wins / totalGames) * 100) : 0;
+        const totalGames = parseInt(user.wins) + parseInt(user.losses);
+        const winrate = totalGames > 0 ? Math.round((parseInt(user.wins) / totalGames) * 100) : 0;
 
         // Calcular rank
         const rank = calculateRank(user.mmr);
+
+        Logger.info(`📈 Estatísticas calculadas:`);
+        Logger.info(`   - Total de jogos: ${totalGames}`);
+        Logger.info(`   - Winrate: ${winrate}%`);
+        Logger.info(`   - Rank: ${rank.full_name}`);
 
         return {
             id: user.id,
             nickname: user.nickname,
             discord_id: user.discord_id,
-            mmr: user.mmr,
+            mmr: parseInt(user.mmr),
             rank,
-            wins: user.wins,
-            losses: user.losses,
+            wins: parseInt(user.wins),
+            losses: parseInt(user.losses),
             winrate,
             kda: '-', // Não usado
             mainRole: user.position || null,

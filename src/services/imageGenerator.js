@@ -254,6 +254,16 @@ class ProfileCardGenerator {
             progressPercent = 0
         } = userData;
 
+        // LOG: Dados recebidos pelo gerador
+        console.log('🎨 ImageGenerator - Dados recebidos:');
+        console.log(`   - username: ${username}`);
+        console.log(`   - rank: ${rank?.full_name}`);
+        console.log(`   - mmr: ${mmr}`);
+        console.log(`   - wins: ${wins}`);
+        console.log(`   - losses: ${losses}`);
+        console.log(`   - winrate: ${winrate}`);
+        console.log(`   - mainRole: ${mainRole}`);
+
         const canvas = createCanvas(this.width, this.height);
         const ctx = canvas.getContext('2d');
 
