@@ -237,6 +237,7 @@ class ProfileCardGenerator {
 
     /**
      * Gera o card de perfil completo
+     * Updated: 2025-12-16 - Layout simplificado com todas informações visíveis
      */
     async generateProfileCard(userData) {
         const {
