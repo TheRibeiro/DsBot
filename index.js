@@ -179,6 +179,12 @@ class DiscordMatchBot {
             Logger.info(`   Team A: ${channelA.name} (${channelA.id})`);
             Logger.info(`   Team B: ${channelB.name} (${channelB.id})`);
 
+            // Mover jogadores se fornecido no payload
+            if (matchData.teams) {
+                await this.movePlayers(matchData.teams.team_a, channelA);
+                await this.movePlayers(matchData.teams.team_b, channelB);
+            }
+
             return {
                 success: true,
                 match_id,
@@ -203,6 +209,31 @@ class DiscordMatchBot {
         });
 
         return channel;
+    }
+
+    async movePlayers(players, channel) {
+        if (!players || players.length === 0) return;
+
+        Logger.info(`🔄 Movendo ${players.length} jogadores para ${channel.name}`);
+
+        for (const player of players) {
+            if (!player.discord_id) continue;
+
+            try {
+                // Fetch member
+                const member = await this.guild.members.fetch(player.discord_id);
+
+                // Só move se estiver em call
+                if (member.voice.channel) {
+                    await member.voice.setChannel(channel);
+                    Logger.info(`   ➡️ Movido: ${player.nickname} (${player.discord_id})`);
+                } else {
+                    Logger.debug(`   Store: ${player.nickname} não está em call`);
+                }
+            } catch (error) {
+                Logger.warn(`   ⚠️ Falha ao mover ${player.nickname}: ${error.message}`);
+            }
+        }
     }
 
     async deleteMatchChannels(matchId) {
