@@ -349,7 +349,7 @@ class ProfileCardGenerator {
             { label: 'VITÓRIAS', value: wins, color: '#4ade80' },
             { label: 'DERROTAS', value: losses, color: '#f87171' },
             { label: 'WINRATE', value: `${winrate}%`, color: winrate >= 50 ? '#4ade80' : '#f87171' },
-            { label: 'KDA', value: kda || 'N/A', color: '#60a5fa' }
+            { label: 'SCORE', value: kda || 'N/A', color: '#60a5fa' }
         ];
 
         if (mainRole) {
