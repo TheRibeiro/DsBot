@@ -322,53 +322,38 @@ class ProfileCardGenerator {
 
         currentY += 40;
 
-        // 7. Barra de Progresso
+        // 7. Stats em linha (mais visível)
+        const totalGames = wins + losses;
+        ctx.font = '18px Arial, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`📊 ${wins}W - ${losses}L (${totalGames} partidas)`, textX, currentY);
+
+        currentY += 35;
+
+        // 8. Winrate e Posição
+        ctx.font = 'bold 24px Arial, sans-serif';
+        const winrateColor = winrate >= 50 ? '#4ade80' : '#f87171';
+        ctx.fillStyle = winrateColor;
+        ctx.fillText(`✓ Winrate: ${winrate}%`, textX, currentY);
+
+        if (mainRole) {
+            ctx.fillStyle = '#a78bfa';
+            ctx.fillText(`  •  Posição: ${mainRole}`, textX + 230, currentY);
+        }
+
+        currentY += 40;
+
+        // 9. Barra de Progresso (se aplicável)
         if (progressPercent > 0 && rank.tier !== 'ELITE') {
-            const barWidth = 400;
-            const barHeight = 16;
+            const barWidth = 350;
+            const barHeight = 14;
             this.drawProgressBar(ctx, textX, currentY, barWidth, barHeight, progressPercent, tierColors.primary);
 
             // Label do progresso
-            ctx.font = '14px Arial, sans-serif';
+            ctx.font = '13px Arial, sans-serif';
             ctx.fillStyle = '#cccccc';
-            ctx.fillText(`${progressPercent}% para próxima divisão`, textX + barWidth + 15, currentY);
-
-            currentY += 35;
+            ctx.fillText(`${progressPercent}% para próxima divisão`, textX + barWidth + 15, currentY - 2);
         }
-
-        // 8. Stats (parte inferior)
-        const statsY = cardY + cardHeight - 120;
-        const statsStartX = cardX + 40;
-
-        // Container de stats com fundo levemente diferente
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        this.roundRect(ctx, statsStartX, statsY, cardWidth - 80, 80, 12, true, false);
-
-        // Estatísticas (simplificado: só winrate e posição)
-        const stats = [
-            { label: 'WINRATE', value: `${winrate}%`, color: winrate >= 50 ? '#4ade80' : '#f87171' }
-        ];
-
-        if (mainRole) {
-            stats.push({ label: 'POSIÇÃO', value: mainRole, color: '#a78bfa' });
-        }
-
-        const statSpacing = (cardWidth - 80) / stats.length;
-
-        stats.forEach((stat, index) => {
-            const statX = statsStartX + (index * statSpacing) + (statSpacing / 2);
-
-            // Label
-            ctx.font = 'bold 12px Arial, sans-serif';
-            ctx.fillStyle = '#888888';
-            ctx.textAlign = 'center';
-            ctx.fillText(stat.label, statX, statsY + 20);
-
-            // Value
-            ctx.font = 'bold 28px Arial, sans-serif';
-            ctx.fillStyle = stat.color;
-            ctx.fillText(stat.value.toString(), statX, statsY + 40);
-        });
 
         // Reset text align
         ctx.textAlign = 'left';
