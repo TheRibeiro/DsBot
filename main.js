@@ -11,9 +11,10 @@
  */
 
 require('dotenv').config();
-const { Client, GatewayIntentBits, ChannelType, Events } = require('discord.js');
+const { Client, GatewayIntentBits, ChannelType, Events, Collection } = require('discord.js');
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const { Logger } = require('./logger');
 
 // Import integration modules
@@ -66,6 +67,9 @@ class ExtendedRematchBot extends DiscordMatchBot {
             ]
         });
 
+        // Slash commands collection
+        this.client.commands = new Collection();
+
         // Re-setup handlers with new client
         this.setupEventHandlers();
 
@@ -80,6 +84,77 @@ class ExtendedRematchBot extends DiscordMatchBot {
         this.client.once(Events.ClientReady, () => this.onExtendedReady());
         this.client.on(Events.VoiceStateUpdate, (oldState, newState) => this.onVoiceStateUpdate(oldState, newState));
         this.client.on(Events.InteractionCreate, interaction => this.onInteraction(interaction));
+
+        // Load slash commands
+        this.loadSlashCommands();
+    }
+
+    /**
+     * Carrega todos os comandos slash da pasta src/commands
+     */
+    loadSlashCommands() {
+        const commandsPath = path.join(__dirname, 'src', 'commands');
+
+        // Verificar se a pasta existe
+        if (!fs.existsSync(commandsPath)) {
+            Logger.warn('⚠️ Pasta de comandos não encontrada, comandos slash desabilitados');
+            return;
+        }
+
+        const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+
+        Logger.info(`📦 Carregando ${commandFiles.length} comandos slash...`);
+
+        for (const file of commandFiles) {
+            const filePath = path.join(commandsPath, file);
+            const command = require(filePath);
+
+            if ('data' in command && 'execute' in command) {
+                this.client.commands.set(command.data.name, command);
+                Logger.info(`  ✅ Comando carregado: /${command.data.name}`);
+            } else {
+                Logger.warn(`  ⚠️ Comando ignorado: ${file} (falta 'data' ou 'execute')`);
+            }
+        }
+    }
+
+    /**
+     * Handler de interações (sobrescreve o método do pai)
+     * Processa tanto comandos slash customizados quanto o comando ping padrão
+     */
+    async onInteraction(interaction) {
+        if (!interaction.isChatInputCommand()) return;
+
+        // Comando padrão ping (do bot base)
+        if (interaction.commandName === 'ping') {
+            await interaction.reply({ content: '🏓 Pong! Bot está online.', ephemeral: true });
+            return;
+        }
+
+        // Processar comandos slash customizados
+        const command = this.client.commands.get(interaction.commandName);
+
+        if (!command) {
+            Logger.warn(`⚠️ Comando desconhecido: ${interaction.commandName}`);
+            return;
+        }
+
+        try {
+            await command.execute(interaction);
+        } catch (error) {
+            Logger.error(`❌ Erro ao executar comando /${interaction.commandName}:`, error);
+
+            const errorMessage = {
+                content: '❌ Ocorreu um erro ao executar este comando.',
+                ephemeral: true
+            };
+
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(errorMessage);
+            } else {
+                await interaction.reply(errorMessage);
+            }
+        }
     }
 
     async onExtendedReady() {
