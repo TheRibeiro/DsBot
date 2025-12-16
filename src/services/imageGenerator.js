@@ -267,8 +267,8 @@ class ProfileCardGenerator {
         const canvas = createCanvas(this.width, this.height);
         const ctx = canvas.getContext('2d');
 
-        // Configuração de texto
-        ctx.textBaseline = 'top';
+        // Configuração de texto - usar baseline padrão para fontes funcionarem
+        ctx.textBaseline = 'alphabetic';
 
         // Obter cores do tier
         const tierColors = TIER_COLORS[rank.tier] || TIER_COLORS['BRONZE'];
@@ -291,28 +291,24 @@ class ProfileCardGenerator {
 
         // 4. Nome do usuário
         const textX = avatarX + avatarSize + 30;
-        let currentY = avatarY;
+        let currentY = avatarY + 36; // Ajustar Y para alphabetic baseline
 
-        // TESTE: Fundo vermelho para ver se o texto está sendo renderizado
-        ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
-        ctx.fillRect(textX, currentY, 400, 40);
-
-        ctx.font = 'bold 36px sans-serif';
+        ctx.font = '36px sans-serif';
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(username || 'TESTE', textX, currentY);
+        ctx.fillText(username, textX, currentY);
 
         console.log(`📝 Desenhando username: "${username}" em (${textX}, ${currentY})`);
 
         if (discriminator && discriminator !== '0') {
-            ctx.font = '24px Arial, sans-serif';
+            ctx.font = '24px sans-serif';
             ctx.fillStyle = '#888888';
-            ctx.fillText(`#${discriminator}`, textX + ctx.measureText(username).width + 10, currentY + 8);
+            ctx.fillText(`#${discriminator}`, textX + ctx.measureText(username).width + 10, currentY);
         }
 
         currentY += 50;
 
         // 5. Título do Rank (GRANDE e impactante)
-        ctx.font = 'bold 48px Arial, sans-serif';
+        ctx.font = '48px sans-serif';
         const gradient = ctx.createLinearGradient(textX, currentY, textX + 300, currentY);
         const primaryRgb = this.hexToRgb(tierColors.primary);
         const secondaryRgb = this.hexToRgb(tierColors.secondary);
@@ -333,7 +329,7 @@ class ProfileCardGenerator {
         currentY += 60;
 
         // 6. MMR
-        ctx.font = '20px Arial, sans-serif';
+        ctx.font = '20px sans-serif';
         ctx.fillStyle = '#aaaaaa';
         ctx.fillText(`${this.formatNumber(mmr)} MMR`, textX, currentY);
 
@@ -341,14 +337,14 @@ class ProfileCardGenerator {
 
         // 7. Stats em linha (mais visível)
         const totalGames = wins + losses;
-        ctx.font = '18px Arial, sans-serif';
+        ctx.font = '18px sans-serif';
         ctx.fillStyle = '#ffffff';
         ctx.fillText(`📊 ${wins}W - ${losses}L (${totalGames} partidas)`, textX, currentY);
 
         currentY += 35;
 
         // 8. Winrate e Posição
-        ctx.font = 'bold 24px Arial, sans-serif';
+        ctx.font = '24px sans-serif';
         const winrateColor = winrate >= 50 ? '#4ade80' : '#f87171';
         ctx.fillStyle = winrateColor;
         ctx.fillText(`✓ Winrate: ${winrate}%`, textX, currentY);
