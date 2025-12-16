@@ -97,7 +97,8 @@ class AuditPoller {
      * Fetch logs from PHP API
      */
     async fetchLogs(sinceId = 0, limit = 50) {
-        const url = `${this.apiUrl}/api/discord/audit_logs.php?since_id=${sinceId}&limit=${limit}`;
+        // Append token to URL as fallback for hosts that strip Authorization header
+        const url = `${this.apiUrl}/api/discord/audit_logs.php?since_id=${sinceId}&limit=${limit}&token=${encodeURIComponent(this.apiToken)}`;
 
         try {
             const response = await fetch(url, {
@@ -215,7 +216,8 @@ class ReportPoller {
 
     async poll() {
         try {
-            const response = await fetch(`${this.apiUrl}/api/discord/pending_reports.php?limit=5`, {
+            // Append token to URL as fallback
+            const response = await fetch(`${this.apiUrl}/api/discord/pending_reports.php?limit=5&token=${encodeURIComponent(this.apiToken)}`, {
                 headers: {
                     'Authorization': `Bearer ${this.apiToken}`
                 }
