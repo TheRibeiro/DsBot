@@ -237,45 +237,66 @@ class DiscordMatchBot {
         }
     }
 
-    async deleteMatchChannels(matchId) {
+    async deleteMatchChannels(matchId, channelIdsOverride = null) {
         Logger.info(`🗑️ Deletando canais da Match #${matchId}`);
 
+        let match = this.db.getMatch(matchId);
+        let channelAId, channelBId;
+
+        // Se IDs vieram no payload (Stateless Mode), usa eles
+        if (channelIdsOverride && channelIdsOverride.team_a && channelIdsOverride.team_b) {
+            Logger.info(`   📝 Usando IDs fornecidos pelo payload (Stateless Mode)`);
+            channelAId = channelIdsOverride.team_a;
+            channelBId = channelIdsOverride.team_b;
+        }
+        // Senão, tenta buscar no DB local (Legacy/Fallback)
+        else if (match) {
+            channelAId = match.team_a_channel_id;
+            channelBId = match.team_b_channel_id;
+        } else {
+            Logger.warn(`⚠️ Match #${matchId} não encontrado no DB local e sem IDs no payload`);
+            return { success: false, error: 'Match channels not found' };
+        }
+
         try {
-            const match = this.db.getMatch(matchId);
-
-            if (!match) {
-                Logger.warn(`⚠️ Match #${matchId} não encontrado no DB`);
-                return { success: false, error: 'Match não encontrado' };
+            // Delete Channel A
+            if (channelAId) {
+                try {
+                    const channelA = await this.guild.channels.fetch(channelAId);
+                    if (channelA) {
+                        await channelA.delete();
+                        Logger.info(`   ✅ Canal Time A deletado (${channelAId})`);
+                    } else {
+                        Logger.warn(`   ⚠️ Canal Time A não existe mais (${channelAId})`);
+                    }
+                } catch (err) {
+                    Logger.warn(`   ⚠️ Erro ao deletar Canal A: ${err.message}`);
+                }
             }
 
-            // Deletar canal Team A
-            try {
-                const channelA = await this.guild.channels.fetch(match.team_a_channel_id);
-                if (channelA) await channelA.delete();
-                Logger.info(`  ✅ Canal Team A deletado`);
-            } catch (error) {
-                Logger.warn(`  ⚠️ Erro ao deletar canal Team A:`, error.message);
+            // Delete Channel B
+            if (channelBId) {
+                try {
+                    const channelB = await this.guild.channels.fetch(channelBId);
+                    if (channelB) {
+                        await channelB.delete();
+                        Logger.info(`   ✅ Canal Time B deletado (${channelBId})`);
+                    } else {
+                        Logger.warn(`   ⚠️ Canal Time B não existe mais (${channelBId})`);
+                    }
+                } catch (err) {
+                    Logger.warn(`   ⚠️ Erro ao deletar Canal B: ${err.message}`);
+                }
             }
 
-            // Deletar canal Team B
-            try {
-                const channelB = await this.guild.channels.fetch(match.team_b_channel_id);
-                if (channelB) await channelB.delete();
-                Logger.info(`  ✅ Canal Team B deletado`);
-            } catch (error) {
-                Logger.warn(`  ⚠️ Erro ao deletar canal Team B:`, error.message);
-            }
-
-            // Marcar como deletado no DB
+            // Mark as deleted in local DB regardless (to keep sync)
             this.db.markAsDeleted(matchId);
 
-            Logger.info(`✅ Canais da Match #${matchId} deletados`);
-
-            return { success: true, match_id: matchId };
+            return { success: true };
 
         } catch (error) {
-            Logger.error(`❌ Erro ao deletar canais da Match #${matchId}:`, error.message);
-            throw error;
+            Logger.error(`❌ Erro crítico ao deletar canais da Match #${matchId}:`, error);
+            return { success: false, error: error.message };
         }
     }
 
@@ -404,11 +425,11 @@ class WebhookServer {
                     return res.status(401).json({ error: 'Unauthorized' });
                 }
 
-                const { match_id } = req.body;
+                const { match_id, channels } = req.body; // <--- Extract channels from body (Stateless override)
                 Logger.info(`📨 Webhook de finalização para Match #${match_id}`);
 
-                // Deletar canais
-                const result = await this.bot.deleteMatchChannels(match_id);
+                // Deletar canais (passando channels overrides se existirem)
+                const result = await this.bot.deleteMatchChannels(match_id, channels);
 
                 res.json(result);
 

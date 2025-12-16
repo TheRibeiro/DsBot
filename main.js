@@ -22,6 +22,7 @@ const { TicketManager } = require('./src/tickets/manager');
 const { setupButtonHandlers } = require('./src/tickets/buttons');
 const { createReportsRouter } = require('./src/webhooks/reports');
 const { AuditPoller, ReportPoller } = require('./src/webhooks/audit');
+const { createRoleSyncRouter } = require('./src/webhooks/roleSync');
 
 // Import base bot components
 const { DiscordMatchBot, MatchChannelDB } = require('./index');
@@ -206,8 +207,8 @@ class ExtendedWebhookServer {
                     return res.status(401).json({ error: 'Unauthorized' });
                 }
 
-                const { match_id } = req.body;
-                const result = await this.bot.deleteMatchChannels(match_id);
+                const { match_id, channels } = req.body;
+                const result = await this.bot.deleteMatchChannels(match_id, channels);
                 res.json(result);
             } catch (error) {
                 Logger.error('Erro no webhook partida-finalizada:', error.message);
@@ -221,6 +222,11 @@ class ExtendedWebhookServer {
             this.app.use('/webhook', reportsRouter);
             Logger.info('✅ Report webhook endpoint registered: /webhook/report-created');
         }
+
+        // NEW: Role Sync webhook
+        const roleSyncRouter = createRoleSyncRouter(this.bot.client, extendedConfig.guildId, extendedConfig.webhookSecret);
+        this.app.use('/webhook', roleSyncRouter);
+        Logger.info('✅ Role sync webhook endpoint registered: /webhook/sync-role');
     }
 
     start() {
