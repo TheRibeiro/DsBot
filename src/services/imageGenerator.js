@@ -344,16 +344,13 @@ class ProfileCardGenerator {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
         this.roundRect(ctx, statsStartX, statsY, cardWidth - 80, 80, 12, true, false);
 
-        // Estatísticas
+        // Estatísticas (simplificado: só winrate e posição)
         const stats = [
-            { label: 'VITÓRIAS', value: wins, color: '#4ade80' },
-            { label: 'DERROTAS', value: losses, color: '#f87171' },
-            { label: 'WINRATE', value: `${winrate}%`, color: winrate >= 50 ? '#4ade80' : '#f87171' },
-            { label: 'SCORE', value: kda || 'N/A', color: '#60a5fa' }
+            { label: 'WINRATE', value: `${winrate}%`, color: winrate >= 50 ? '#4ade80' : '#f87171' }
         ];
 
         if (mainRole) {
-            stats.push({ label: 'MAIN ROLE', value: mainRole, color: '#a78bfa' });
+            stats.push({ label: 'POSIÇÃO', value: mainRole, color: '#a78bfa' });
         }
 
         const statSpacing = (cardWidth - 80) / stats.length;

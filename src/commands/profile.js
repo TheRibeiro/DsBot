@@ -118,14 +118,10 @@ async function fetchUserData(discordId) {
                 u.mmr,
                 u.position,
                 COUNT(DISTINCT CASE WHEN mp.team = m.winner_team THEN m.id END) as wins,
-                COUNT(DISTINCT CASE WHEN mp.team != m.winner_team AND m.winner_team IS NOT NULL THEN m.id END) as losses,
-                AVG(ps.goals) as avg_goals,
-                AVG(ps.assists) as avg_assists,
-                AVG(ps.saves) as avg_saves
+                COUNT(DISTINCT CASE WHEN mp.team != m.winner_team AND m.winner_team IS NOT NULL THEN m.id END) as losses
             FROM users u
             LEFT JOIN match_players mp ON u.id = mp.user_id
             LEFT JOIN matches m ON mp.match_id = m.id AND m.status = 'FINALIZADA'
-            LEFT JOIN player_stats ps ON u.id = ps.user_id AND m.id = ps.match_id
             WHERE u.discord_id = ?
             GROUP BY u.id
         `, [discordId]);
@@ -140,14 +136,6 @@ async function fetchUserData(discordId) {
         const totalGames = user.wins + user.losses;
         const winrate = totalGames > 0 ? Math.round((user.wins / totalGames) * 100) : 0;
 
-        // Calcular média de gols+assistências (para futebol/Rocket League)
-        const avgGoals = user.avg_goals || 0;
-        const avgAssists = user.avg_assists || 0;
-        const avgSaves = user.avg_saves || 0;
-
-        // Score médio por partida (gols + assistências)
-        const avgScore = (avgGoals + avgAssists).toFixed(1);
-
         // Calcular rank
         const rank = calculateRank(user.mmr);
 
@@ -160,7 +148,7 @@ async function fetchUserData(discordId) {
             wins: user.wins,
             losses: user.losses,
             winrate,
-            kda: avgScore, // Usando como "score médio" em vez de KDA
+            kda: '-', // Não usado
             mainRole: user.position || null,
             progressPercent: rank.percent_in_division
         };
