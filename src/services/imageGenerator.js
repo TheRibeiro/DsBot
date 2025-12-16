@@ -30,6 +30,20 @@ class ProfileCardGenerator {
         } : { r: 255, g: 255, b: 255 };
     }
 
+    drawRoundedRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
+    }
+
     async generateProfileCard(userData) {
         const {
             username,
@@ -61,7 +75,8 @@ class ProfileCardGenerator {
 
         // 2. Card principal
         ctx.fillStyle = 'rgba(30, 30, 40, 0.9)';
-        ctx.roundRect(30, 30, this.width - 60, this.height - 60, 20);
+        // Substituindo roundRect por desenho manual para garantir compatibilidade
+        this.drawRoundedRect(ctx, 30, 30, this.width - 60, this.height - 60, 20);
         ctx.fill();
 
         // 3. Avatar
@@ -89,7 +104,7 @@ class ProfileCardGenerator {
             console.error('Erro ao carregar avatar:', error);
         }
 
-        // 4. Configurar texto - FORÇAR fonte padrão
+        // 4. Configurar texto - FORÇAR fonte padrão segura
         ctx.textBaseline = 'middle';
         ctx.textAlign = 'left';
 
@@ -106,25 +121,25 @@ class ProfileCardGenerator {
         };
 
         // Nome do usuário - GRANDE e SIMPLES
-        ctx.font = '32px sans-serif';
+        ctx.font = 'bold 32px "Segoe UI", "Arial", sans-serif';
         drawText(username, textX, currentY, '#FFFFFF');
 
         currentY += 50;
 
         // Rank - COM ÍCONE
-        ctx.font = '28px sans-serif';
+        ctx.font = 'bold 28px "Segoe UI", "Arial", sans-serif';
         drawText(`${tierColors.icon} ${rank.full_name}`, textX, currentY, tierColors.primary);
 
         currentY += 40;
 
         // MMR
-        ctx.font = '22px sans-serif';
+        ctx.font = '22px "Segoe UI", "Arial", sans-serif';
         drawText(`${mmr} MMR`, textX, currentY, '#AAAAAA');
 
         currentY += 50;
 
         // Stats - Linha 1
-        ctx.font = '18px sans-serif';
+        ctx.font = '18px "Segoe UI", "Arial", sans-serif';
         const totalGames = wins + losses;
         drawText(`Partidas: ${totalGames}  |  ${wins}W - ${losses}L`, textX, currentY, '#FFFFFF');
 
@@ -140,7 +155,7 @@ class ProfileCardGenerator {
         }
 
         // Marca d'água
-        ctx.font = '12px sans-serif';
+        ctx.font = '12px "Segoe UI", "Arial", sans-serif';
         ctx.textAlign = 'right';
         drawText('Rematch Inhouse', this.width - 40, this.height - 20, 'rgba(255, 255, 255, 0.3)', 'transparent', 0);
 
