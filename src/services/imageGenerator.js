@@ -96,51 +96,53 @@ class ProfileCardGenerator {
         const textX = avatarX + avatarSize + 40;
         let currentY = 80;
 
+        // FUNÇÃO HELPER: Desenhar texto com contorno
+        const drawText = (text, x, y, fillColor, strokeColor = 'rgba(0,0,0,0.5)', strokeWidth = 2) => {
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = strokeWidth;
+            ctx.strokeText(text, x, y);
+            ctx.fillStyle = fillColor;
+            ctx.fillText(text, x, y);
+        };
+
         // Nome do usuário - GRANDE e SIMPLES
         ctx.font = '32px sans-serif';
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillText(username, textX, currentY);
+        drawText(username, textX, currentY, '#FFFFFF');
 
         currentY += 50;
 
         // Rank - COM ÍCONE
         ctx.font = '28px sans-serif';
-        ctx.fillStyle = tierColors.primary;
-        ctx.fillText(`${tierColors.icon} ${rank.full_name}`, textX, currentY);
+        drawText(`${tierColors.icon} ${rank.full_name}`, textX, currentY, tierColors.primary);
 
         currentY += 40;
 
         // MMR
         ctx.font = '22px sans-serif';
-        ctx.fillStyle = '#AAAAAA';
-        ctx.fillText(`${mmr} MMR`, textX, currentY);
+        drawText(`${mmr} MMR`, textX, currentY, '#AAAAAA');
 
         currentY += 50;
 
         // Stats - Linha 1
         ctx.font = '18px sans-serif';
-        ctx.fillStyle = '#FFFFFF';
         const totalGames = wins + losses;
-        ctx.fillText(`Partidas: ${totalGames}  |  ${wins}W - ${losses}L`, textX, currentY);
+        drawText(`Partidas: ${totalGames}  |  ${wins}W - ${losses}L`, textX, currentY, '#FFFFFF');
 
         currentY += 35;
 
         // Winrate
         const winrateColor = winrate >= 50 ? '#4ade80' : '#f87171';
-        ctx.fillStyle = winrateColor;
-        ctx.fillText(`Winrate: ${winrate}%`, textX, currentY);
+        drawText(`Winrate: ${winrate}%`, textX, currentY, winrateColor);
 
         // Posição
         if (mainRole) {
-            ctx.fillStyle = '#a78bfa';
-            ctx.fillText(`  |  Posicao: ${mainRole}`, textX + 150, currentY);
+            drawText(`  |  Posicao: ${mainRole}`, textX + 150, currentY, '#a78bfa');
         }
 
         // Marca d'água
         ctx.font = '12px sans-serif';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
         ctx.textAlign = 'right';
-        ctx.fillText('Rematch Inhouse', this.width - 40, this.height - 20);
+        drawText('Rematch Inhouse', this.width - 40, this.height - 20, 'rgba(255, 255, 255, 0.3)', 'transparent', 0);
 
         console.log('✅ Card gerado com sucesso!');
 
