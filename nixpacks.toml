@@ -1,0 +1,11 @@
+# Configuração Nixpacks para Railway
+# Instala fontes necessárias para @napi-rs/canvas
+
+[phases.setup]
+aptPkgs = ["fonts-dejavu-core", "fontconfig"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[start]
+cmd = "npm start"

@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.env
+.git
+.gitignore
+*.md
+*.png
+*.jpg
+test*.js
+reproduce_bug.js
+diagnose-fonts.js
+font_test.png
+repro_output.png
+test_bigint_output.png

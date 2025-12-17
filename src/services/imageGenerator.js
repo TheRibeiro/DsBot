@@ -137,53 +137,56 @@ class ProfileCardGenerator {
         const textX = avatarX + avatarSize + 40;
         let currentY = 80;
 
-        // FUNÇÃO HELPER: Desenhar texto com contorno
-        const drawText = (text, x, y, fillColor, strokeColor = 'rgba(0,0,0,0.5)', strokeWidth = 2) => {
-            ctx.strokeStyle = strokeColor;
-            ctx.lineWidth = strokeWidth;
+        // FUNÇÃO HELPER: Desenhar texto com contorno ROBUSTO
+        const drawText = (text, x, y, fontSize, fillColor, bold = false) => {
+            // Forçar fonte sans-serif genérica que sempre existe
+            ctx.font = `${bold ? 'bold ' : ''}${fontSize}px sans-serif`;
+
+            // Contorno preto para legibilidade
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
+            ctx.lineWidth = Math.max(2, fontSize / 10);
             ctx.strokeText(text, x, y);
+
+            // Texto principal
             ctx.fillStyle = fillColor;
             ctx.fillText(text, x, y);
+
+            console.log(`📝 Texto renderizado: "${text}" em (${x}, ${y}) com fonte ${fontSize}px`);
         };
 
         // Nome do usuário - GRANDE e SIMPLES
-        ctx.font = 'bold 32px "Segoe UI", "Arial", sans-serif';
-        drawText(username, textX, currentY, '#FFFFFF');
+        drawText(username, textX, currentY, 32, '#FFFFFF', true);
 
         currentY += 50;
 
         // Rank - COM ÍCONE
-        ctx.font = 'bold 28px "Segoe UI", "Arial", sans-serif';
-        drawText(`${tierColors.icon} ${safeRank.full_name}`, textX, currentY, tierColors.primary);
+        drawText(`${tierColors.icon} ${safeRank.full_name}`, textX, currentY, 28, tierColors.primary, true);
 
         currentY += 40;
 
         // MMR
-        ctx.font = '22px "Segoe UI", "Arial", sans-serif';
-        drawText(`${safeMmr} MMR`, textX, currentY, '#AAAAAA');
+        drawText(`${safeMmr} MMR`, textX, currentY, 22, '#AAAAAA', false);
 
         currentY += 50;
 
         // Stats - Linha 1
-        ctx.font = '18px "Segoe UI", "Arial", sans-serif';
         const totalGames = safeWins + safeLosses;
-        drawText(`Partidas: ${totalGames}  |  ${safeWins}W - ${safeLosses}L`, textX, currentY, '#FFFFFF');
+        drawText(`Partidas: ${totalGames}  |  ${safeWins}W - ${safeLosses}L`, textX, currentY, 18, '#FFFFFF', false);
 
         currentY += 35;
 
         // Winrate
         const winrateColor = safeWinrate >= 50 ? '#4ade80' : '#f87171';
-        drawText(`Winrate: ${safeWinrate}%`, textX, currentY, winrateColor);
+        drawText(`Winrate: ${safeWinrate}%`, textX, currentY, 18, winrateColor, false);
 
         // Posição
         if (safeMainRole) {
-            drawText(`  |  Posicao: ${safeMainRole}`, textX + 150, currentY, '#a78bfa');
+            drawText(`  |  Posicao: ${safeMainRole}`, textX + 150, currentY, 18, '#a78bfa', false);
         }
 
         // Marca d'água
-        ctx.font = '12px "Segoe UI", "Arial", sans-serif';
         ctx.textAlign = 'right';
-        drawText('Rematch Inhouse', this.width - 40, this.height - 20, 'rgba(255, 255, 255, 0.3)', 'transparent', 0);
+        drawText('Rematch Inhouse', this.width - 40, this.height - 20, 12, 'rgba(255, 255, 255, 0.3)', false);
 
         console.log('✅ Card gerado com sucesso!');
 
