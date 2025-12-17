@@ -69,6 +69,8 @@ class ProfileCardGenerator {
                     '--single-process',
                     '--disable-gpu'
                 ]
+                // Deixar Puppeteer encontrar o Chrome automaticamente
+                // Não especificar executablePath
             });
             Logger.info('✅ Puppeteer inicializado');
         }

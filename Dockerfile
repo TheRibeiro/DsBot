@@ -36,18 +36,12 @@ WORKDIR /app
 # Copiar package files
 COPY package*.json ./
 
-# Instalar dependências (incluindo Puppeteer)
+# Instalar dependências (incluindo Puppeteer com Chrome)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=false
 RUN npm ci --only=production
-
-# Baixar Chromium para Puppeteer (se não foi baixado automaticamente)
-RUN npx puppeteer browsers install chrome
 
 # Copiar código fonte
 COPY . .
-
-# Criar variável de ambiente para Puppeteer usar Chrome instalado
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH=/root/.cache/puppeteer/chrome/linux-*/chrome-linux*/chrome
 
 # Expor porta (se necessário)
 EXPOSE 3000
