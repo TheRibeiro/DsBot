@@ -56,11 +56,37 @@ class ProfileCardGenerator {
         } = userData;
 
         console.log('🎨 Gerando card simplificado para:', username);
+        console.log('📊 Dados recebidos:', JSON.stringify({
+            username,
+            rank: rank?.full_name,
+            mmr,
+            wins,
+            losses,
+            winrate,
+            mainRole
+        }, null, 2));
+
+        // VALIDAÇÃO: Garantir que os dados não sejam undefined
+        const safeWins = wins ?? 0;
+        const safeLosses = losses ?? 0;
+        const safeWinrate = winrate ?? 0;
+        const safeMmr = mmr ?? 0;
+        const safeMainRole = mainRole || null;
+        const safeRank = rank || { tier: 'BRONZE', full_name: 'Bronze I' };
+
+        console.log('✅ Dados validados:', JSON.stringify({
+            safeWins,
+            safeLosses,
+            safeWinrate,
+            safeMmr,
+            safeMainRole,
+            safeRank: safeRank.full_name
+        }, null, 2));
 
         const canvas = createCanvas(this.width, this.height);
         const ctx = canvas.getContext('2d');
 
-        const tierColors = TIER_COLORS[rank.tier] || TIER_COLORS['BRONZE'];
+        const tierColors = TIER_COLORS[safeRank.tier] || TIER_COLORS['BRONZE'];
         const rgb = this.hexToRgb(tierColors.primary);
 
         // 1. Background com gradiente
@@ -128,30 +154,30 @@ class ProfileCardGenerator {
 
         // Rank - COM ÍCONE
         ctx.font = 'bold 28px "Segoe UI", "Arial", sans-serif';
-        drawText(`${tierColors.icon} ${rank.full_name}`, textX, currentY, tierColors.primary);
+        drawText(`${tierColors.icon} ${safeRank.full_name}`, textX, currentY, tierColors.primary);
 
         currentY += 40;
 
         // MMR
         ctx.font = '22px "Segoe UI", "Arial", sans-serif';
-        drawText(`${mmr} MMR`, textX, currentY, '#AAAAAA');
+        drawText(`${safeMmr} MMR`, textX, currentY, '#AAAAAA');
 
         currentY += 50;
 
         // Stats - Linha 1
         ctx.font = '18px "Segoe UI", "Arial", sans-serif';
-        const totalGames = wins + losses;
-        drawText(`Partidas: ${totalGames}  |  ${wins}W - ${losses}L`, textX, currentY, '#FFFFFF');
+        const totalGames = safeWins + safeLosses;
+        drawText(`Partidas: ${totalGames}  |  ${safeWins}W - ${safeLosses}L`, textX, currentY, '#FFFFFF');
 
         currentY += 35;
 
         // Winrate
-        const winrateColor = winrate >= 50 ? '#4ade80' : '#f87171';
-        drawText(`Winrate: ${winrate}%`, textX, currentY, winrateColor);
+        const winrateColor = safeWinrate >= 50 ? '#4ade80' : '#f87171';
+        drawText(`Winrate: ${safeWinrate}%`, textX, currentY, winrateColor);
 
         // Posição
-        if (mainRole) {
-            drawText(`  |  Posicao: ${mainRole}`, textX + 150, currentY, '#a78bfa');
+        if (safeMainRole) {
+            drawText(`  |  Posicao: ${safeMainRole}`, textX + 150, currentY, '#a78bfa');
         }
 
         // Marca d'água

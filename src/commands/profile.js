@@ -141,12 +141,28 @@ async function fetchUserData(discordId) {
         Logger.info(`   - Wins: ${user.wins} (type: ${typeof user.wins})`);
         Logger.info(`   - Losses: ${user.losses} (type: ${typeof user.losses})`);
 
+        // Converter BigInt para Number se necessário (Railway pode retornar BigInt)
+        const safeWins = user.wins !== null && user.wins !== undefined
+            ? (typeof user.wins === 'bigint' ? Number(user.wins) : parseInt(user.wins) || 0)
+            : 0;
+        const safeLosses = user.losses !== null && user.losses !== undefined
+            ? (typeof user.losses === 'bigint' ? Number(user.losses) : parseInt(user.losses) || 0)
+            : 0;
+        const safeMmr = user.mmr !== null && user.mmr !== undefined
+            ? (typeof user.mmr === 'bigint' ? Number(user.mmr) : parseInt(user.mmr) || 0)
+            : 0;
+
+        Logger.info(`🔧 Valores convertidos:`);
+        Logger.info(`   - safeWins: ${safeWins} (type: ${typeof safeWins})`);
+        Logger.info(`   - safeLosses: ${safeLosses} (type: ${typeof safeLosses})`);
+        Logger.info(`   - safeMmr: ${safeMmr} (type: ${typeof safeMmr})`);
+
         // Calcular estatísticas
-        const totalGames = parseInt(user.wins) + parseInt(user.losses);
-        const winrate = totalGames > 0 ? Math.round((parseInt(user.wins) / totalGames) * 100) : 0;
+        const totalGames = safeWins + safeLosses;
+        const winrate = totalGames > 0 ? Math.round((safeWins / totalGames) * 100) : 0;
 
         // Calcular rank
-        const rank = calculateRank(user.mmr);
+        const rank = calculateRank(safeMmr);
 
         Logger.info(`📈 Estatísticas calculadas:`);
         Logger.info(`   - Total de jogos: ${totalGames}`);
@@ -157,10 +173,10 @@ async function fetchUserData(discordId) {
             id: user.id,
             nickname: user.nickname,
             discord_id: user.discord_id,
-            mmr: parseInt(user.mmr),
+            mmr: safeMmr,
             rank,
-            wins: parseInt(user.wins),
-            losses: parseInt(user.losses),
+            wins: safeWins,
+            losses: safeLosses,
             winrate,
             kda: '-', // Não usado
             mainRole: user.position || null,
