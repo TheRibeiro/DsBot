@@ -117,11 +117,20 @@ async function fetchUserData(discordId) {
                 u.discord_id,
                 u.mmr,
                 u.position,
+                u.current_winstreak,
+                t.tag as team_tag,
                 COUNT(DISTINCT CASE WHEN mp.team = m.winner_team THEN m.id END) as wins,
-                COUNT(DISTINCT CASE WHEN mp.team != m.winner_team AND m.winner_team IS NOT NULL THEN m.id END) as losses
+                COUNT(DISTINCT CASE WHEN mp.team != m.winner_team AND m.winner_team IS NOT NULL THEN m.id END) as losses,
+                COALESCE(SUM(ps.defenses), 0) as total_defenses,
+                COALESCE(SUM(ps.intercepts), 0) as total_intercepts,
+                COALESCE(SUM(ps.passes), 0) as total_passes,
+                COALESCE(SUM(ps.assists), 0) as total_assists,
+                COALESCE(SUM(ps.goals), 0) as total_goals
             FROM users u
+            LEFT JOIN teams t ON u.current_team_id = t.id
             LEFT JOIN match_players mp ON u.id = mp.user_id
             LEFT JOIN matches m ON mp.match_id = m.id AND m.status = 'FINALIZADA'
+            LEFT JOIN player_stats ps ON mp.match_id = ps.match_id AND mp.user_id = ps.user_id
             WHERE u.discord_id = ?
             GROUP BY u.id
         `, [discordId]);
@@ -135,27 +144,15 @@ async function fetchUserData(discordId) {
         // LOG: Dados retornados do banco
         Logger.info(`📊 Dados do banco para ${user.nickname}:`);
         Logger.info(`   - ID: ${user.id}`);
-        Logger.info(`   - Discord ID: ${user.discord_id}`);
-        Logger.info(`   - MMR: ${user.mmr} (type: ${typeof user.mmr})`);
-        Logger.info(`   - Position: ${user.position}`);
-        Logger.info(`   - Wins: ${user.wins} (type: ${typeof user.wins})`);
-        Logger.info(`   - Losses: ${user.losses} (type: ${typeof user.losses})`);
+        Logger.info(`   - Rank: ${user.mmr} MMR`);
+        Logger.info(`   - Streak: ${user.current_winstreak}`);
+        Logger.info(`   - Team: ${user.team_tag || 'None'}`);
 
-        // Converter BigInt para Number se necessário (Railway pode retornar BigInt)
-        const safeWins = user.wins !== null && user.wins !== undefined
-            ? (typeof user.wins === 'bigint' ? Number(user.wins) : parseInt(user.wins) || 0)
-            : 0;
-        const safeLosses = user.losses !== null && user.losses !== undefined
-            ? (typeof user.losses === 'bigint' ? Number(user.losses) : parseInt(user.losses) || 0)
-            : 0;
-        const safeMmr = user.mmr !== null && user.mmr !== undefined
-            ? (typeof user.mmr === 'bigint' ? Number(user.mmr) : parseInt(user.mmr) || 0)
-            : 0;
-
-        Logger.info(`🔧 Valores convertidos:`);
-        Logger.info(`   - safeWins: ${safeWins} (type: ${typeof safeWins})`);
-        Logger.info(`   - safeLosses: ${safeLosses} (type: ${typeof safeLosses})`);
-        Logger.info(`   - safeMmr: ${safeMmr} (type: ${typeof safeMmr})`);
+        // Converter tipos
+        const safeWins = Number(user.wins) || 0;
+        const safeLosses = Number(user.losses) || 0;
+        const safeMmr = Number(user.mmr) || 0;
+        const safeStreak = Number(user.current_winstreak) || 0;
 
         // Calcular estatísticas
         const totalGames = safeWins + safeLosses;
@@ -164,37 +161,65 @@ async function fetchUserData(discordId) {
         // Calcular rank
         const rank = calculateRank(safeMmr);
 
-        Logger.info(`📈 Estatísticas calculadas:`);
-        Logger.info(`   - Total de jogos: ${totalGames}`);
-        Logger.info(`   - Winrate: ${winrate}%`);
-        Logger.info(`   - Rank: ${rank.full_name}`);
+        // Determinar Status baseado na posição
+        let statusLabel = 'KDA';
+        let statusValue = '0.0';
+
+        const position = user.position || 'Fixo'; // Fallback
+
+        switch (position) {
+            case 'Goleiro':
+                statusLabel = 'Defesas';
+                statusValue = user.total_defenses || 0;
+                break;
+            case 'Fixo':
+                statusLabel = 'Interceptações';
+                statusValue = user.total_intercepts || 0;
+                break;
+            case 'Ala Def':
+                statusLabel = 'Passes';
+                statusValue = user.total_passes || 0;
+                break;
+            case 'Ala Of':
+                statusLabel = 'Assistências';
+                statusValue = user.total_assists || 0;
+                break;
+            case 'Pivô':
+                statusLabel = 'Gols';
+                statusValue = user.total_goals || 0;
+                break;
+            default:
+                // Fallback genérico se posição for desconhecida ou null
+                statusLabel = 'Assistências';
+                statusValue = user.total_assists || 0;
+        }
+
+        // Se o valor for muito grande, formatar (ex: 1.2k) - opcional, por enquanto raw
+        // statusValue = formatNumber(statusValue);
+
+        Logger.info(`📈 Stats processados:`);
+        Logger.info(`   - Position: ${position}`);
+        Logger.info(`   - Status: ${statusLabel} = ${statusValue}`);
 
         return {
             id: user.id,
             nickname: user.nickname,
             discord_id: user.discord_id,
+            teamTag: user.team_tag ? `[${user.team_tag}]` : '',
             mmr: safeMmr,
             rank,
             wins: safeWins,
             losses: safeLosses,
             winrate,
-            kda: '-', // Não usado
-            mainRole: user.position || null,
+            winStreak: safeStreak,
+            statusLabel,
+            statusValue,
+            mainRole: position,
             progressPercent: rank.percent_in_division
         };
 
     } catch (error) {
         Logger.error('❌ Erro ao buscar dados do usuário:', error.message);
-
-        // Erro de conexão ao banco
-        if (error.code === 'ECONNREFUSED') {
-            Logger.error('💡 Não foi possível conectar ao banco de dados.');
-            Logger.error(`💡 Verifique as variáveis de ambiente: DB_HOST=${dbConfig.host}, DB_USER=${dbConfig.user}, DB_NAME=${dbConfig.database}`);
-            const dbError = new Error('DATABASE_CONNECTION_ERROR');
-            dbError.userMessage = '❌ Erro ao conectar ao banco de dados. Entre em contato com um administrador.';
-            throw dbError;
-        }
-
         throw error;
     }
 }
@@ -246,9 +271,13 @@ module.exports = {
                 wins: userData.wins,
                 losses: userData.losses,
                 winrate: userData.winrate,
-                kda: userData.kda,
+                winrate: userData.winrate,
+                winStreak: userData.winStreak,
+                statusLabel: userData.statusLabel,
+                statusValue: userData.statusValue,
                 mainRole: userData.mainRole,
-                progressPercent: userData.progressPercent
+                progressPercent: userData.progressPercent,
+                teamTag: userData.teamTag
             };
 
             Logger.info(`🎨 Gerando card para ${targetUser.tag} - Rank: ${userData.rank.full_name} (${userData.mmr} MMR)`);

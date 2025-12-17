@@ -101,17 +101,17 @@ class ProfileCardGenerator {
             wins,
             losses,
             winrate,
-            kda = 0,
             mainRole,
-            progressPercent = 0
+            progressPercent = 0,
+            winStreak = 0,
+            teamTag = '',
+            statusLabel = 'Status',
+            statusValue = '0'
         } = userData;
 
         const totalGames = wins + losses;
         const tierColors = TIER_COLORS[rank.tier] || TIER_COLORS['BRONZE'];
         const roleIcon = ROLE_ICONS[mainRole] || '⚽';
-
-        // Calcular win streak (exemplo simples - você pode melhorar isso)
-        const winStreak = wins >= 5 ? Math.min(wins, 10) : 0;
 
         // Ler template
         let html = await fs.readFile(this.templatePath, 'utf-8');
@@ -131,8 +131,9 @@ class ProfileCardGenerator {
             .replace(/{{MMR}}/g, mmr)
             .replace(/{{RANK_NAME}}/g, rank.full_name)
             .replace(/{{PROGRESS_PERCENT}}/g, progressPercent)
-            .replace(/{{KDA}}/g, kda || '0.0')
-            .replace(/{{DIVISION}}/g, rank.division || '-')
+            .replace(/{{TEAM_TAG}}/g, teamTag)
+            .replace(/{{STATUS_LABEL}}/g, statusLabel)
+            .replace(/{{STATUS_VALUE}}/g, statusValue)
             .replace(/{{TIER_PRIMARY}}/g, tierColors.primary)
             .replace(/{{TIER_SECONDARY}}/g, tierColors.secondary)
             .replace(/{{TIER_ICON}}/g, tierColors.icon);

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -106,6 +107,7 @@
         }
     </style>
 </head>
+
 <body class="hex-pattern min-h-screen flex items-center justify-center p-8">
 
     <!-- Main Card Container -->
@@ -113,7 +115,8 @@
 
         <!-- Header: Branding -->
         <div class="flex items-center gap-3 mb-8">
-            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <div
+                class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
                 <span class="text-white font-bold text-xl">M</span>
             </div>
             <span class="text-white text-sm font-bold tracking-wider uppercase">MANEIRO INHOUSE</span>
@@ -123,17 +126,17 @@
         <div class="flex items-start gap-6 mb-8">
             <!-- Avatar -->
             <div class="relative">
-                <img
-                    src="{{AVATAR_URL}}"
-                    alt="{{USERNAME}} Avatar"
-                    class="w-24 h-24 rounded-full border-4 avatar-border shadow-lg"
-                >
+                <img src="{{AVATAR_URL}}" alt="{{USERNAME}} Avatar"
+                    class="w-24 h-24 rounded-full border-4 avatar-border shadow-lg">
             </div>
 
             <!-- Name and Badges -->
             <div class="flex-1">
                 <div class="flex items-baseline gap-2 mb-3">
-                    <h2 class="text-white text-3xl font-bold">{{USERNAME}}</h2>
+                    <h2 class="text-white text-3xl font-bold">
+                        {{USERNAME}}
+                        <span class="text-blue-400 text-2xl font-bold ml-1">{{TEAM_TAG}}</span>
+                    </h2>
                     {{#if DISCRIMINATOR}}
                     <span class="text-gray-400 text-lg font-medium">[{{DISCRIMINATOR}}]</span>
                     {{/if}}
@@ -170,7 +173,8 @@
             <div class="mmr-block rounded-xl p-6">
                 <div class="text-gray-400 text-sm font-semibold mb-2 uppercase tracking-wide">MMR</div>
                 <div class="text-white text-4xl font-bold mb-1">{{MMR}}</div>
-                <div class="text-blue-400 text-xs font-medium mb-3" style="color: var(--tier-primary)">{{RANK_NAME}}</div>
+                <div class="text-blue-400 text-xs font-medium mb-3" style="color: var(--tier-primary)">{{RANK_NAME}}
+                </div>
 
                 <!-- Progress Bar -->
                 {{#if PROGRESS_PERCENT}}
@@ -184,13 +188,12 @@
         <!-- Bottom Stats Grid -->
         <div class="grid grid-cols-3 gap-3">
 
-            <!-- Stat 1: KDA -->
+            <!-- Stat 1: STATUS (Dinâmico) -->
             <div class="stat-card rounded-lg p-4 text-center">
                 <div class="flex items-center justify-center gap-2 mb-2">
-                    <span class="text-gray-400 text-xs font-semibold uppercase">KDA</span>
+                    <span class="text-gray-400 text-xs font-semibold uppercase">{{STATUS_LABEL}}</span>
                 </div>
-                <div class="text-white text-2xl font-bold">{{KDA}}</div>
-                <div class="text-gray-500 text-xs">/avg</div>
+                <div class="text-white text-2xl font-bold">{{STATUS_VALUE}}</div>
             </div>
 
             <!-- Stat 2: Partidas -->
@@ -201,12 +204,14 @@
                 <div class="text-white text-2xl font-bold">{{TOTAL_GAMES}}</div>
             </div>
 
-            <!-- Stat 3: Divisão -->
-            <div class="stat-card rounded-lg p-4 text-center">
-                <div class="flex items-center justify-center gap-2 mb-2">
-                    <span class="text-gray-400 text-xs font-semibold uppercase">Divisão</span>
-                </div>
-                <div class="text-white text-2xl font-bold">{{DIVISION}}</div>
+            <!-- Stat 3: Rematch Branding -->
+            <div
+                class="stat-card rounded-lg p-4 text-center flex flex-col items-center justify-center relative overflow-hidden">
+                <!-- Glow effect -->
+                <div class="absolute inset-0 bg-blue-500 opacity-10 blur-xl"></div>
+
+                <div class="text-blue-400 text-xs font-semibold uppercase tracking-widest mb-1 z-10">REMATCH</div>
+                <div class="text-white text-xl font-black italic z-10">INHOUSE</div>
             </div>
         </div>
 
@@ -221,4 +226,5 @@
     </script>
 
 </body>
+
 </html>
