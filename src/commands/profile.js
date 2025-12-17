@@ -234,8 +234,8 @@ module.exports = {
                 return loadingMsg.edit(`❌ **${targetUser.username}** não está registrado no sistema Inhouse.\n\nPara se registrar, acesse o site e vincule sua conta do Discord.`);
             }
 
-            // Gerar card de perfil
-            const generator = new ProfileCardGenerator();
+            // Gerar card de perfil usando Puppeteer
+            const generator = ProfileCardGenerator(); // Singleton instance
 
             const cardData = {
                 username: targetUser.username,

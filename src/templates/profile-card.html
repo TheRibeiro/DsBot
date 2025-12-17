@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0a0e1a;
+        }
+
+        /* Background hexagonal pattern */
+        .hex-pattern {
+            background-color: #0a0e1a;
+            background-image:
+                linear-gradient(30deg, #1a1f2e 12%, transparent 12.5%, transparent 87%, #1a1f2e 87.5%, #1a1f2e),
+                linear-gradient(150deg, #1a1f2e 12%, transparent 12.5%, transparent 87%, #1a1f2e 87.5%, #1a1f2e),
+                linear-gradient(30deg, #1a1f2e 12%, transparent 12.5%, transparent 87%, #1a1f2e 87.5%, #1a1f2e),
+                linear-gradient(150deg, #1a1f2e 12%, transparent 12.5%, transparent 87%, #1a1f2e 87.5%, #1a1f2e),
+                linear-gradient(60deg, #151923 25%, transparent 25.5%, transparent 75%, #151923 75%, #151923),
+                linear-gradient(60deg, #151923 25%, transparent 25.5%, transparent 75%, #151923 75%, #151923);
+            background-size: 80px 140px;
+            background-position: 0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px;
+        }
+
+        /* Glassmorphism effect */
+        .glass-card {
+            background: rgba(30, 35, 48, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        /* Gradient border */
+        .gradient-border {
+            position: relative;
+            background: linear-gradient(135deg, rgba(74, 158, 255, 0.1), rgba(147, 51, 234, 0.1));
+            border: 1px solid rgba(74, 158, 255, 0.2);
+        }
+
+        /* Custom progress bar */
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--tier-primary), var(--tier-secondary));
+            border-radius: 10px;
+            box-shadow: 0 0 10px var(--tier-primary-50);
+            transition: width 0.3s ease;
+        }
+
+        /* Winrate highlight */
+        .winrate-highlight {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.05));
+            border: 2px solid rgba(34, 197, 94, 0.3);
+        }
+
+        /* MMR block */
+        .mmr-block {
+            background: rgba(20, 25, 35, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Stat card */
+        .stat-card {
+            background: rgba(20, 25, 35, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Badge styles */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .badge-blue {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        .badge-orange {
+            background: rgba(249, 115, 22, 0.2);
+            color: #fb923c;
+            border: 1px solid rgba(249, 115, 22, 0.3);
+        }
+
+        /* Avatar border color based on tier */
+        .avatar-border {
+            border-color: var(--tier-primary-50);
+            box-shadow: 0 4px 16px var(--tier-primary-20);
+        }
+    </style>
+</head>
+<body class="hex-pattern min-h-screen flex items-center justify-center p-8">
+
+    <!-- Main Card Container -->
+    <div id="profile-card" class="glass-card gradient-border rounded-2xl p-8 w-full max-w-[580px] shadow-2xl">
+
+        <!-- Header: Branding -->
+        <div class="flex items-center gap-3 mb-8">
+            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span class="text-white font-bold text-xl">M</span>
+            </div>
+            <span class="text-white text-sm font-bold tracking-wider uppercase">MANEIRO INHOUSE</span>
+        </div>
+
+        <!-- Player Identity Section -->
+        <div class="flex items-start gap-6 mb-8">
+            <!-- Avatar -->
+            <div class="relative">
+                <img
+                    src="{{AVATAR_URL}}"
+                    alt="{{USERNAME}} Avatar"
+                    class="w-24 h-24 rounded-full border-4 avatar-border shadow-lg"
+                >
+            </div>
+
+            <!-- Name and Badges -->
+            <div class="flex-1">
+                <div class="flex items-baseline gap-2 mb-3">
+                    <h2 class="text-white text-3xl font-bold">{{USERNAME}}</h2>
+                    {{#if DISCRIMINATOR}}
+                    <span class="text-gray-400 text-lg font-medium">[{{DISCRIMINATOR}}]</span>
+                    {{/if}}
+                </div>
+
+                <div class="flex gap-2">
+                    {{#if MAIN_ROLE}}
+                    <span class="badge badge-blue">
+                        {{ROLE_ICON}}
+                        {{MAIN_ROLE}}
+                    </span>
+                    {{/if}}
+                    {{#if WIN_STREAK}}
+                    <span class="badge badge-orange">
+                        🔥
+                        {{WIN_STREAK}}W Streak
+                    </span>
+                    {{/if}}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Stats Grid -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+
+            <!-- Winrate Block (LEFT) -->
+            <div class="winrate-highlight rounded-xl p-6">
+                <div class="text-green-400 text-sm font-semibold mb-2 uppercase tracking-wide">Winrate</div>
+                <div class="text-green-400 text-5xl font-bold mb-2">{{WINRATE}}%</div>
+                <div class="text-gray-400 text-xs font-medium">{{TOTAL_GAMES}} Matches {{WINS}}W - {{LOSSES}}L</div>
+            </div>
+
+            <!-- MMR Block (RIGHT) -->
+            <div class="mmr-block rounded-xl p-6">
+                <div class="text-gray-400 text-sm font-semibold mb-2 uppercase tracking-wide">MMR</div>
+                <div class="text-white text-4xl font-bold mb-1">{{MMR}}</div>
+                <div class="text-blue-400 text-xs font-medium mb-3" style="color: var(--tier-primary)">{{RANK_NAME}}</div>
+
+                <!-- Progress Bar -->
+                {{#if PROGRESS_PERCENT}}
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{PROGRESS_PERCENT}}%"></div>
+                </div>
+                {{/if}}
+            </div>
+        </div>
+
+        <!-- Bottom Stats Grid -->
+        <div class="grid grid-cols-3 gap-3">
+
+            <!-- Stat 1: KDA -->
+            <div class="stat-card rounded-lg p-4 text-center">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <span class="text-gray-400 text-xs font-semibold uppercase">KDA</span>
+                </div>
+                <div class="text-white text-2xl font-bold">{{KDA}}</div>
+                <div class="text-gray-500 text-xs">/avg</div>
+            </div>
+
+            <!-- Stat 2: Partidas -->
+            <div class="stat-card rounded-lg p-4 text-center">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <span class="text-gray-400 text-xs font-semibold uppercase">Partidas</span>
+                </div>
+                <div class="text-white text-2xl font-bold">{{TOTAL_GAMES}}</div>
+            </div>
+
+            <!-- Stat 3: Divisão -->
+            <div class="stat-card rounded-lg p-4 text-center">
+                <div class="flex items-center justify-center gap-2 mb-2">
+                    <span class="text-gray-400 text-xs font-semibold uppercase">Divisão</span>
+                </div>
+                <div class="text-white text-2xl font-bold">{{DIVISION}}</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Define CSS variables for tier colors
+        document.documentElement.style.setProperty('--tier-primary', '{{TIER_PRIMARY}}');
+        document.documentElement.style.setProperty('--tier-secondary', '{{TIER_SECONDARY}}');
+        document.documentElement.style.setProperty('--tier-primary-50', '{{TIER_PRIMARY}}80');
+        document.documentElement.style.setProperty('--tier-primary-20', '{{TIER_PRIMARY}}33');
+    </script>
+
+</body>
+</html>
