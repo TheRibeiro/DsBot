@@ -1,19 +1,21 @@
 /**
  * Premium Profile Card Image Generator
+ * Based on profile-card-reference.html design
  *
- * Gera cards visuais impactantes estilo Faceit/GamersClub com:
- * - Gradientes baseados nas cores do rank
- * - Glassmorphism (vidro fosco)
- * - Barras de progresso animadas
- * - Fontes modernas e sombras suaves
+ * Layout:
+ * - Hexagonal pattern background
+ * - Glassmorphism card with gradient border
+ * - Header: MANEIRO INHOUSE branding
+ * - Player Identity: Avatar + Name + Badges
+ * - Main Stats Grid: Winrate (left) + MMR (right)
+ * - Bottom Stats Grid: 3 stat cards
  */
 
-const { createCanvas, loadImage, registerFont } = require('@napi-rs/canvas');
-const path = require('path');
+const { createCanvas, loadImage } = require('@napi-rs/canvas');
 const { Logger } = require('../../logger');
 
 /**
- * Configuração de cores dos tiers (sincronizado com Rank.php)
+ * Configuração de cores dos tiers
  */
 const TIER_COLORS = {
     'BRONZE': { primary: '#CD7F32', secondary: '#8B4513', icon: '🥉' },
@@ -27,24 +29,11 @@ const TIER_COLORS = {
 
 class ProfileCardGenerator {
     constructor() {
-        this.width = 900;
-        this.height = 500;
-        this.loaded = false;
-
-        // Tentar registrar fontes customizadas (opcional)
-        try {
-            const fontsDir = path.join(__dirname, '../../assets/fonts');
-            // Você pode baixar fontes como Inter, Poppins, etc. e colocar aqui
-            // registerFont(path.join(fontsDir, 'Inter-Bold.ttf'), { family: 'Inter', weight: 'bold' });
-            // registerFont(path.join(fontsDir, 'Inter-Regular.ttf'), { family: 'Inter' });
-        } catch (error) {
-            Logger.warn('⚠️ Fontes customizadas não encontradas, usando fontes do sistema');
-        }
+        this.width = 1160; // 580px * 2 (para qualidade HD)
+        this.height = 900; // Proporção ajustada
+        this.scale = 2; // Renderizar em 2x para qualidade
     }
 
-    /**
-     * Converte HEX para RGB
-     */
     hexToRgb(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
@@ -55,86 +44,36 @@ class ProfileCardGenerator {
     }
 
     /**
-     * Desenha background com gradiente baseado no rank
+     * Desenha padrão hexagonal de fundo
      */
-    drawBackground(ctx, tierColors) {
-        const { primary, secondary } = tierColors;
+    drawHexPattern(ctx) {
+        const baseColor = '#0a0e1a';
+        const pattern1 = '#1a1f2e';
 
-        // Fundo escuro base
-        ctx.fillStyle = '#0a0e1a';
+        // Fundo base
+        ctx.fillStyle = baseColor;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // Gradiente radial do rank (top-right)
-        const gradient = ctx.createRadialGradient(this.width * 0.8, this.height * 0.2, 0, this.width * 0.8, this.height * 0.2, this.width * 0.7);
-        const primaryRgb = this.hexToRgb(primary);
-        const secondaryRgb = this.hexToRgb(secondary);
+        // Padrão hexagonal simplificado (usando retângulos para canvas)
+        ctx.fillStyle = pattern1;
+        const hexSize = 80;
 
-        gradient.addColorStop(0, `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.3)`);
-        gradient.addColorStop(0.5, `rgba(${secondaryRgb.r}, ${secondaryRgb.g}, ${secondaryRgb.b}, 0.15)`);
-        gradient.addColorStop(1, 'rgba(10, 14, 26, 0)');
-
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, this.width, this.height);
-
-        // Efeito de noise/textura (opcional)
-        this.drawNoise(ctx, 0.03);
-    }
-
-    /**
-     * Adiciona textura de ruído sutil
-     */
-    drawNoise(ctx, opacity = 0.03) {
-        const imageData = ctx.getImageData(0, 0, this.width, this.height);
-        const pixels = imageData.data;
-
-        for (let i = 0; i < pixels.length; i += 4) {
-            const noise = (Math.random() - 0.5) * 255 * opacity;
-            pixels[i] += noise;
-            pixels[i + 1] += noise;
-            pixels[i + 2] += noise;
+        for (let y = 0; y < this.height; y += hexSize) {
+            for (let x = 0; x < this.width; x += hexSize) {
+                if ((x + y) % (hexSize * 2) === 0) {
+                    ctx.globalAlpha = 0.3;
+                    ctx.fillRect(x, y, hexSize / 2, hexSize / 2);
+                }
+            }
         }
 
-        ctx.putImageData(imageData, 0, 0);
-    }
-
-    /**
-     * Desenha card com glassmorphism
-     */
-    drawGlassCard(ctx, x, y, width, height, borderColor, blur = 20) {
-        // Sombra externa
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 30;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 10;
-
-        // Background semi-transparente (vidro fosco)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        this.roundRect(ctx, x, y, width, height, 20, true, false);
-
-        // Reset shadow
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-
-        // Borda com cor do rank
-        const borderRgb = this.hexToRgb(borderColor);
-        ctx.strokeStyle = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.3)`;
-        ctx.lineWidth = 2;
-        this.roundRect(ctx, x, y, width, height, 20, false, true);
-
-        // Brilho interno (top)
-        const innerGlow = ctx.createLinearGradient(x, y, x, y + 100);
-        innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
-        innerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = innerGlow;
-        this.roundRect(ctx, x, y, width, 100, 20, true, false);
+        ctx.globalAlpha = 1;
     }
 
     /**
      * Desenha retângulo com bordas arredondadas
      */
-    roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+    roundRect(ctx, x, y, width, height, radius, fill = true, stroke = false) {
         ctx.beginPath();
         ctx.moveTo(x + radius, y);
         ctx.lineTo(x + width - radius, y);
@@ -152,23 +91,78 @@ class ProfileCardGenerator {
     }
 
     /**
-     * Desenha avatar circular com borda colorida
+     * Desenha card principal com glassmorphism
+     */
+    drawMainCard(ctx, x, y, width, height, tierColors) {
+        // Sombra do card
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 60;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 20;
+
+        // Background glassmorphism
+        ctx.fillStyle = 'rgba(30, 35, 48, 0.7)';
+        this.roundRect(ctx, x, y, width, height, 32, true, false);
+
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+
+        // Gradient border
+        const primaryRgb = this.hexToRgb(tierColors.primary);
+        const gradient = ctx.createLinearGradient(x, y, x + width, y + height);
+        gradient.addColorStop(0, `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.2)`);
+        gradient.addColorStop(1, 'rgba(147, 51, 234, 0.2)');
+
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, x, y, width, height, 32, false, true);
+    }
+
+    /**
+     * Desenha header com branding
+     */
+    drawHeader(ctx, x, y) {
+        // Logo box (gradiente azul/roxo)
+        const logoSize = 80;
+        const logoGradient = ctx.createLinearGradient(x, y, x + logoSize, y + logoSize);
+        logoGradient.addColorStop(0, '#3b82f6');
+        logoGradient.addColorStop(1, '#9333ea');
+
+        ctx.fillStyle = logoGradient;
+        this.roundRect(ctx, x, y, logoSize, logoSize, 16, true, false);
+
+        // Letra "M"
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('M', x + logoSize / 2, y + logoSize / 2);
+
+        // Texto "MANEIRO INHOUSE"
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 24px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.letterSpacing = '0.1em';
+        ctx.fillText('MANEIRO INHOUSE', x + logoSize + 24, y + logoSize / 2);
+    }
+
+    /**
+     * Desenha avatar circular com borda
      */
     async drawAvatar(ctx, avatarUrl, x, y, size, borderColor) {
         try {
             const avatar = await loadImage(avatarUrl);
 
-            // Sombra do avatar
-            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-            ctx.shadowBlur = 20;
-            ctx.shadowOffsetX = 0;
-            ctx.shadowOffsetY = 8;
+            // Borda colorida (sombra + glow)
+            ctx.shadowColor = `rgba(${this.hexToRgb(borderColor).r}, ${this.hexToRgb(borderColor).g}, ${this.hexToRgb(borderColor).b}, 0.4)`;
+            ctx.shadowBlur = 40;
 
-            // Borda colorida
             ctx.beginPath();
-            ctx.arc(x + size / 2, y + size / 2, size / 2 + 5, 0, Math.PI * 2);
+            ctx.arc(x + size / 2, y + size / 2, size / 2 + 8, 0, Math.PI * 2);
             const borderRgb = this.hexToRgb(borderColor);
-            ctx.fillStyle = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.8)`;
+            ctx.fillStyle = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.5)`;
             ctx.fill();
 
             // Reset shadow
@@ -181,13 +175,11 @@ class ProfileCardGenerator {
             ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
             ctx.closePath();
             ctx.clip();
-
             ctx.drawImage(avatar, x, y, size, size);
             ctx.restore();
 
         } catch (error) {
             Logger.warn(`⚠️ Erro ao carregar avatar: ${error.message}`);
-            // Fallback: círculo cinza
             ctx.fillStyle = '#2a2e3a';
             ctx.beginPath();
             ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
@@ -196,48 +188,173 @@ class ProfileCardGenerator {
     }
 
     /**
-     * Desenha barra de progresso moderna
+     * Desenha badge (estilo Tailwind)
      */
-    drawProgressBar(ctx, x, y, width, height, percent, color) {
-        // Background da barra
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        this.roundRect(ctx, x, y, width, height, height / 2, true, false);
+    drawBadge(ctx, text, x, y, color, icon = '') {
+        const padding = { x: 24, y: 12 };
+        const rgb = this.hexToRgb(color);
 
-        // Borda
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        this.roundRect(ctx, x, y, width, height, height / 2, false, true);
+        // Medir texto
+        ctx.font = '600 20px sans-serif';
+        const textWidth = ctx.measureText(icon + ' ' + text).width;
+        const badgeWidth = textWidth + padding.x * 2;
+        const badgeHeight = 40;
 
-        // Barra de progresso
-        const fillWidth = (width - 4) * (percent / 100);
-        if (fillWidth > 0) {
-            const gradient = ctx.createLinearGradient(x, y, x + fillWidth, y);
-            const rgb = this.hexToRgb(color);
-            gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
-            gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`);
+        // Background
+        ctx.fillStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.2)`;
+        this.roundRect(ctx, x, y, badgeWidth, badgeHeight, 16, true, false);
 
-            ctx.fillStyle = gradient;
-            this.roundRect(ctx, x + 2, y + 2, fillWidth, height - 4, (height - 4) / 2, true, false);
+        // Border
+        ctx.strokeStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.3)`;
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, x, y, badgeWidth, badgeHeight, 16, false, true);
 
-            // Glow effect
-            ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
-            ctx.shadowBlur = 15;
-            this.roundRect(ctx, x + 2, y + 2, fillWidth, height - 4, (height - 4) / 2, true, false);
+        // Text
+        ctx.fillStyle = color;
+        ctx.font = '600 20px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(icon + ' ' + text, x + badgeWidth / 2, y + badgeHeight / 2);
+
+        return badgeWidth;
+    }
+
+    /**
+     * Desenha bloco de winrate (destaque verde)
+     */
+    drawWinrateBlock(ctx, x, y, width, height, winrate, wins, losses) {
+        const totalGames = wins + losses;
+
+        // Background com destaque verde
+        const bgGradient = ctx.createLinearGradient(x, y, x + width, y + height);
+        bgGradient.addColorStop(0, 'rgba(34, 197, 94, 0.15)');
+        bgGradient.addColorStop(1, 'rgba(22, 163, 74, 0.05)');
+
+        ctx.fillStyle = bgGradient;
+        this.roundRect(ctx, x, y, width, height, 24, true, false);
+
+        // Border verde
+        ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)';
+        ctx.lineWidth = 4;
+        this.roundRect(ctx, x, y, width, height, 24, false, true);
+
+        // Label "WINRATE"
+        ctx.fillStyle = '#22c55e';
+        ctx.font = '600 20px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText('WINRATE', x + 48, y + 48);
+
+        // Winrate % (grande)
+        ctx.fillStyle = '#22c55e';
+        ctx.font = 'bold 96px sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.fillText(`${winrate}%`, x + 48, y + 80);
+
+        // Matches info
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '500 18px sans-serif';
+        ctx.textBaseline = 'bottom';
+        ctx.fillText(`${totalGames} Matches ${wins}W - ${losses}L`, x + 48, y + height - 48);
+    }
+
+    /**
+     * Desenha bloco de MMR
+     */
+    drawMMRBlock(ctx, x, y, width, height, mmr, rankName, tierColors, progressPercent) {
+        // Background escuro
+        ctx.fillStyle = 'rgba(20, 25, 35, 0.8)';
+        this.roundRect(ctx, x, y, width, height, 24, true, false);
+
+        // Border sutil
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, x, y, width, height, 24, false, true);
+
+        // Label "MMR"
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '600 20px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText('MMR', x + 48, y + 48);
+
+        // MMR número
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 72px sans-serif';
+        ctx.fillText(mmr.toString(), x + 48, y + 80);
+
+        // Rank name
+        ctx.fillStyle = tierColors.primary;
+        ctx.font = '500 18px sans-serif';
+        ctx.fillText(rankName, x + 48, y + 170);
+
+        // Progress bar
+        if (progressPercent > 0) {
+            const barY = y + 210;
+            const barWidth = width - 96;
+            const barHeight = 12;
+
+            // Background
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            this.roundRect(ctx, x + 48, barY, barWidth, barHeight, 10, true, false);
+
+            // Fill
+            const fillWidth = barWidth * (progressPercent / 100);
+            const barGradient = ctx.createLinearGradient(x + 48, barY, x + 48 + fillWidth, barY);
+            const rgb = this.hexToRgb(tierColors.primary);
+            barGradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.8)`);
+            barGradient.addColorStop(1, tierColors.primary);
+
+            ctx.fillStyle = barGradient;
+            this.roundRect(ctx, x + 48, barY, fillWidth, barHeight, 10, true, false);
+
+            // Glow
+            ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.5)`;
+            ctx.shadowBlur = 20;
+            this.roundRect(ctx, x + 48, barY, fillWidth, barHeight, 10, true, false);
             ctx.shadowColor = 'transparent';
             ctx.shadowBlur = 0;
         }
     }
 
     /**
-     * Formata número com separador de milhares
+     * Desenha stat card (bottom grid)
      */
-    formatNumber(num) {
-        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    drawStatCard(ctx, x, y, width, height, label, value, suffix = '') {
+        // Background
+        ctx.fillStyle = 'rgba(20, 25, 35, 0.6)';
+        this.roundRect(ctx, x, y, width, height, 16, true, false);
+
+        // Border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, x, y, width, height, 16, false, true);
+
+        // Label
+        ctx.fillStyle = '#9ca3af';
+        ctx.font = '600 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(label.toUpperCase(), x + width / 2, y + 32);
+
+        // Value
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 48px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(value.toString(), x + width / 2, y + height / 2 + 10);
+
+        // Suffix
+        if (suffix) {
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '500 16px sans-serif';
+            ctx.textBaseline = 'top';
+            ctx.fillText(suffix, x + width / 2, y + height - 48);
+        }
     }
 
     /**
      * Gera o card de perfil completo
-     * Updated: 2025-12-16 - Layout simplificado com todas informações visíveis
      */
     async generateProfileCard(userData) {
         const {
@@ -249,134 +366,142 @@ class ProfileCardGenerator {
             wins,
             losses,
             winrate,
-            kda,
             mainRole,
             progressPercent = 0
         } = userData;
 
-        // LOG: Dados recebidos pelo gerador
-        console.log('🎨 ImageGenerator - Dados recebidos:');
-        console.log(`   - username: ${username}`);
-        console.log(`   - rank: ${rank?.full_name}`);
-        console.log(`   - mmr: ${mmr}`);
-        console.log(`   - wins: ${wins}`);
-        console.log(`   - losses: ${losses}`);
-        console.log(`   - winrate: ${winrate}`);
-        console.log(`   - mainRole: ${mainRole}`);
+        console.log('🎨 Gerando card baseado em profile-card-reference.html');
+        console.log(`   - ${username} | ${rank?.full_name} | ${mmr} MMR | ${winrate}% WR`);
 
         const canvas = createCanvas(this.width, this.height);
         const ctx = canvas.getContext('2d');
 
-        // Configuração de texto - usar baseline padrão para fontes funcionarem
-        ctx.textBaseline = 'alphabetic';
-
-        // Obter cores do tier
+        // Cores do tier
         const tierColors = TIER_COLORS[rank.tier] || TIER_COLORS['BRONZE'];
 
-        // 1. Background
-        this.drawBackground(ctx, tierColors);
+        // 1. Background hexagonal
+        this.drawHexPattern(ctx);
 
-        // 2. Card principal com glassmorphism
-        const cardX = 40;
-        const cardY = 40;
-        const cardWidth = this.width - 80;
-        const cardHeight = this.height - 80;
-        this.drawGlassCard(ctx, cardX, cardY, cardWidth, cardHeight, tierColors.primary);
+        // 2. Card principal (centralizado com padding)
+        const cardPadding = 64;
+        const cardWidth = this.width - cardPadding * 2;
+        const cardHeight = this.height - cardPadding * 2;
+        this.drawMainCard(ctx, cardPadding, cardPadding, cardWidth, cardHeight, tierColors);
 
-        // 3. Avatar (esquerda)
-        const avatarSize = 140;
-        const avatarX = cardX + 40;
-        const avatarY = cardY + 40;
-        await this.drawAvatar(ctx, avatarUrl, avatarX, avatarY, avatarSize, tierColors.primary);
+        // 3. Header (MANEIRO INHOUSE)
+        this.drawHeader(ctx, cardPadding + 64, cardPadding + 64);
 
-        // 4. Nome do usuário
-        const textX = avatarX + avatarSize + 30;
-        let currentY = avatarY + 36; // Ajustar Y para alphabetic baseline
+        // 4. Player Identity Section
+        const identityY = cardPadding + 200;
+        const avatarSize = 192;
+        const avatarX = cardPadding + 64;
 
-        ctx.font = '36px sans-serif';
+        await this.drawAvatar(ctx, avatarUrl, avatarX, identityY, avatarSize, tierColors.primary);
+
+        // Nome e tag
+        const nameX = avatarX + avatarSize + 48;
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(username, textX, currentY);
-
-        console.log(`📝 Desenhando username: "${username}" em (${textX}, ${currentY})`);
+        ctx.font = 'bold 56px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(username, nameX, identityY);
 
         if (discriminator && discriminator !== '0') {
-            ctx.font = '24px sans-serif';
-            ctx.fillStyle = '#888888';
-            ctx.fillText(`#${discriminator}`, textX + ctx.measureText(username).width + 10, currentY);
+            const nameWidth = ctx.measureText(username).width;
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '500 32px sans-serif';
+            ctx.fillText(`[${discriminator}]`, nameX + nameWidth + 16, identityY + 8);
         }
 
-        currentY += 50;
+        // Badges
+        const badgeY = identityY + 80;
+        let badgeX = nameX;
 
-        // 5. Título do Rank (GRANDE e impactante)
-        ctx.font = '48px sans-serif';
-        const gradient = ctx.createLinearGradient(textX, currentY, textX + 300, currentY);
-        const primaryRgb = this.hexToRgb(tierColors.primary);
-        const secondaryRgb = this.hexToRgb(tierColors.secondary);
-        gradient.addColorStop(0, tierColors.primary);
-        gradient.addColorStop(1, tierColors.secondary);
-        ctx.fillStyle = gradient;
-
-        // Ícone + Nome do Rank
-        ctx.fillText(`${tierColors.icon} ${rank.full_name.toUpperCase()}`, textX, currentY);
-
-        // Glow no rank
-        ctx.shadowColor = `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.8)`;
-        ctx.shadowBlur = 25;
-        ctx.fillText(`${tierColors.icon} ${rank.full_name.toUpperCase()}`, textX, currentY);
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-
-        currentY += 60;
-
-        // 6. MMR
-        ctx.font = '20px sans-serif';
-        ctx.fillStyle = '#aaaaaa';
-        ctx.fillText(`${this.formatNumber(mmr)} MMR`, textX, currentY);
-
-        currentY += 40;
-
-        // 7. Stats em linha (mais visível)
-        const totalGames = wins + losses;
-        ctx.font = '18px sans-serif';
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(`📊 ${wins}W - ${losses}L (${totalGames} partidas)`, textX, currentY);
-
-        currentY += 35;
-
-        // 8. Winrate e Posição
-        ctx.font = '24px sans-serif';
-        const winrateColor = winrate >= 50 ? '#4ade80' : '#f87171';
-        ctx.fillStyle = winrateColor;
-        ctx.fillText(`✓ Winrate: ${winrate}%`, textX, currentY);
-
+        // Badge de posição
         if (mainRole) {
-            ctx.fillStyle = '#a78bfa';
-            ctx.fillText(`  •  Posição: ${mainRole}`, textX + 230, currentY);
+            const badge1Width = this.drawBadge(ctx, mainRole, badgeX, badgeY, '#3b82f6', '');
+            badgeX += badge1Width + 16;
         }
 
-        currentY += 40;
-
-        // 9. Barra de Progresso (se aplicável)
-        if (progressPercent > 0 && rank.tier !== 'ELITE') {
-            const barWidth = 350;
-            const barHeight = 14;
-            this.drawProgressBar(ctx, textX, currentY, barWidth, barHeight, progressPercent, tierColors.primary);
-
-            // Label do progresso
-            ctx.font = '13px Arial, sans-serif';
-            ctx.fillStyle = '#cccccc';
-            ctx.fillText(`${progressPercent}% para próxima divisão`, textX + barWidth + 15, currentY - 2);
+        // Badge de streak (exemplo)
+        const totalGames = wins + losses;
+        if (totalGames >= 5) {
+            this.drawBadge(ctx, `${wins}W Streak`, badgeX, badgeY, '#f97316', '🔥');
         }
 
-        // Reset text align
-        ctx.textAlign = 'left';
+        // 5. Main Stats Grid (2 colunas)
+        const statsY = identityY + 200;
+        const statsGap = 32;
+        const blockWidth = (cardWidth - 128 - statsGap) / 2;
+        const blockHeight = 300;
 
-        // 9. Marca d'água
-        ctx.font = '10px Arial, sans-serif';
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.textAlign = 'right';
-        ctx.fillText('Generated by Rematch Inhouse Bot', this.width - 50, this.height - 20);
+        // Winrate block (left)
+        this.drawWinrateBlock(
+            ctx,
+            cardPadding + 64,
+            statsY,
+            blockWidth,
+            blockHeight,
+            winrate,
+            wins,
+            losses
+        );
 
+        // MMR block (right)
+        this.drawMMRBlock(
+            ctx,
+            cardPadding + 64 + blockWidth + statsGap,
+            statsY,
+            blockWidth,
+            blockHeight,
+            mmr,
+            rank.full_name,
+            tierColors,
+            progressPercent
+        );
+
+        // 6. Bottom Stats Grid (3 colunas)
+        const bottomY = statsY + blockHeight + 32;
+        const statCardWidth = (cardWidth - 128 - statsGap * 2) / 3;
+        const statCardHeight = 200;
+
+        // Stat 1: KDA ou placeholder
+        this.drawStatCard(
+            ctx,
+            cardPadding + 64,
+            bottomY,
+            statCardWidth,
+            statCardHeight,
+            'KDA',
+            '3.2',
+            '/avg'
+        );
+
+        // Stat 2: Partidas
+        this.drawStatCard(
+            ctx,
+            cardPadding + 64 + statCardWidth + statsGap,
+            bottomY,
+            statCardWidth,
+            statCardHeight,
+            'Partidas',
+            totalGames,
+            ''
+        );
+
+        // Stat 3: Divisão ou placeholder
+        this.drawStatCard(
+            ctx,
+            cardPadding + 64 + (statCardWidth + statsGap) * 2,
+            bottomY,
+            statCardWidth,
+            statCardHeight,
+            'Divisão',
+            rank.division || '-',
+            ''
+        );
+
+        console.log('✅ Card gerado com sucesso!');
         return canvas.toBuffer('image/png');
     }
 }
