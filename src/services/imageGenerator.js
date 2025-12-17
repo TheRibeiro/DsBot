@@ -120,13 +120,16 @@ class ProfileCardGenerator {
             fs.readFile(this.logoPath).catch(() => null) // Fallback seguro se não existir
         ]);
 
-        const logoBase64 = logoBuffer
-            ? `data:image/jpeg;base64,${logoBuffer.toString('base64')}`
             : ''; // Se falhar, o img src vazio ou estilo de fallback será usado
+
+        // Preparar bloco HTML do logo (para evitar lógica complexa no template regex)
+        const brandLogoBlock = logoBase64
+            ? `<img src="${logoBase64}" alt="Logo" class="w-full h-full object-cover">`
+            : `<span class="text-white font-bold text-xl">M</span>`;
 
         // Substituir placeholders
         html = html
-            .replace(/{{BRAND_LOGO_BASE64}}/g, logoBase64)
+            .replace(/{{BRAND_LOGO_BLOCK}}/g, brandLogoBlock)
             .replace(/{{AVATAR_URL}}/g, avatarUrl)
             .replace(/{{USERNAME}}/g, username)
             .replace(/{{DISCRIMINATOR}}/g, discriminator || '')
