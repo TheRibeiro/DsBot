@@ -1,83 +1,63 @@
 /**
  * Gerador de Card de Perfil PREMIUM - Maneiro Inhouse
- * Design UI/UX profissional com hierarquia visual clara
+ * Design UI/UX profissional de verdade - NADA TORTO, TUDO ALINHADO
  */
 
 const { createCanvas, loadImage } = require('@napi-rs/canvas');
 
 // === CORES POR TIER ===
 const TIER_COLORS = {
-    'BRONZE': { primary: '#CD7F32', secondary: '#8B4513', icon: '🥉' },
+    'BRONZE': { primary: '#CD7F32', secondary: '#964B00', icon: '🥉' },
     'PRATA': { primary: '#C0C0C0', secondary: '#A8A8A8', icon: '🥈' },
-    'OURO': { primary: '#FFD700', secondary: '#FFA500', icon: '🥇' },
-    'PLATINA': { primary: '#00CED1', secondary: '#1E90FF', icon: '💠' },
-    'DIAMANTE': { primary: '#B9F2FF', secondary: '#4169E1', icon: '💎' },
+    'OURO': { primary: '#FFD700', secondary: '#DAA520', icon: '🥇' },
+    'PLATINA': { primary: '#00CED1', secondary: '#008B8B', icon: '💠' },
+    'DIAMANTE': { primary: '#B9F2FF', secondary: '#00BFFF', icon: '💎' },
     'MESTRE': { primary: '#9333EA', secondary: '#7C3AED', icon: '👑' },
     'ELITE': { primary: '#EF4444', secondary: '#DC2626', icon: '🔥' }
 };
 
-// === STATS POR POSIÇÃO ===
-const POSITION_CONFIG = {
-    'Goleiro': {
-        icon: '🧤',
-        stats: [
-            { label: 'DEFESAS', icon: '🧤' },
-            { label: 'PASSES', icon: '⚡' },
-            { label: 'INTERCEP.', icon: '🛡️' }
-        ]
-    },
-    'Fixo': {
-        icon: '🛡️',
-        stats: [
-            { label: 'INTERCEP.', icon: '🛡️' },
-            { label: 'PASSES', icon: '⚡' },
-            { label: 'ASSIST.', icon: '🎯' }
-        ]
-    },
-    'Ala Def': {
-        icon: '🛡️',
-        stats: [
-            { label: 'INTERCEP.', icon: '🛡️' },
-            { label: 'PASSES', icon: '⚡' },
-            { label: 'ASSIST.', icon: '🎯' }
-        ]
-    },
-    'Ala Of': {
-        icon: '⚡',
-        stats: [
-            { label: 'GOLS', icon: '⚽' },
-            { label: 'ASSIST.', icon: '🎯' },
-            { label: 'PASSES', icon: '⚡' }
-        ]
-    },
-    'Pivô': {
-        icon: '⚽',
-        stats: [
-            { label: 'GOLS', icon: '⚽' },
-            { label: 'ASSIST.', icon: '🎯' },
-            { label: 'PASSES', icon: '⚡' }
-        ]
-    }
+// === ÍCONES POR POSIÇÃO ===
+const POSITION_ICONS = {
+    'Goleiro': '🧤',
+    'Fixo': '🛡️',
+    'Ala Def': '🛡️',
+    'Ala Of': '⚡',
+    'Pivô': '⚽'
 };
 
 class ProfileCardGenerator {
     constructor() {
-        this.width = 1000;
-        this.height = 500;
-        this.padding = 24;
+        // Dimensões perfeitas para Discord
+        this.width = 1200;
+        this.height = 600;
+
+        // Sistema de Grid de 8px
+        this.unit = 8;
+
+        // Paleta de cores profissional
         this.colors = {
-            bg1: '#1a1a2e',
-            bg2: '#16213e',
-            cardBg: 'rgba(30, 30, 45, 0.85)',
-            textPrimary: '#FFFFFF',
-            textSecondary: '#B0B3B8',
-            textMuted: '#65676B',
-            success: '#3DDB84',
-            danger: '#FF4757',
-            accent: '#4A9EFF'
+            bg: {
+                dark: '#0F0F1E',
+                medium: '#1A1A2E',
+                light: '#25254A'
+            },
+            card: 'rgba(20, 20, 35, 0.95)',
+            text: {
+                primary: '#FFFFFF',
+                secondary: '#A0AEC0',
+                muted: '#718096'
+            },
+            accent: {
+                success: '#48BB78',
+                danger: '#F56565',
+                info: '#4299E1',
+                warning: '#ECC94B'
+            },
+            overlay: 'rgba(0, 0, 0, 0.3)'
         };
     }
 
+    // Utilitários de desenho
     hexToRgb(hex) {
         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
         return result ? {
@@ -87,7 +67,7 @@ class ProfileCardGenerator {
         } : { r: 255, g: 255, b: 255 };
     }
 
-    drawRoundedRect(ctx, x, y, width, height, radius) {
+    roundRect(ctx, x, y, width, height, radius) {
         ctx.beginPath();
         ctx.moveTo(x + radius, y);
         ctx.lineTo(x + width - radius, y);
@@ -101,19 +81,25 @@ class ProfileCardGenerator {
         ctx.closePath();
     }
 
-    drawText(ctx, text, x, y, fontSize, color, bold = false, align = 'left', shadow = true) {
-        ctx.font = `${bold ? 'bold ' : ''}${fontSize}px sans-serif`;
-        ctx.textAlign = align;
-        ctx.textBaseline = 'middle';
-
-        if (shadow) {
-            ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-            ctx.lineWidth = Math.max(2, fontSize / 10);
-            ctx.strokeText(text, x, y);
-        }
-
+    drawText(ctx, text, x, y, size, color, weight = 'normal', align = 'left', baseline = 'top') {
+        ctx.font = `${weight === 'bold' ? 'bold ' : ''}${size}px sans-serif`;
         ctx.fillStyle = color;
+        ctx.textAlign = align;
+        ctx.textBaseline = baseline;
+
+        // Sombra sutil para legibilidade
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 4;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 2;
+
         ctx.fillText(text, x, y);
+
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
     }
 
     async generateProfileCard(userData) {
@@ -128,247 +114,449 @@ class ProfileCardGenerator {
             avatarUrl
         } = userData;
 
-        console.log('🎨 Gerando card PREMIUM para:', username);
-        console.log('📊 Dados:', JSON.stringify({ username, rank: rank?.full_name, mmr, wins, losses, winrate, mainRole }, null, 2));
+        console.log('🎨 [PREMIUM] Gerando card para:', username);
 
-        // VALIDAÇÃO
-        const safeWins = wins ?? 0;
-        const safeLosses = losses ?? 0;
-        const safeWinrate = winrate ?? 0;
-        const safeMmr = mmr ?? 0;
-        const safeMainRole = mainRole || 'Jogador';
-        const safeRank = rank || { tier: 'BRONZE', full_name: 'Bronze I' };
-        const totalGames = safeWins + safeLosses;
+        // Validação robusta
+        const safeData = {
+            username: username || 'Jogador',
+            rank: rank || { tier: 'BRONZE', full_name: 'Bronze I' },
+            mmr: mmr ?? 0,
+            wins: wins ?? 0,
+            losses: losses ?? 0,
+            winrate: winrate ?? 0,
+            mainRole: mainRole || 'Jogador',
+            avatarUrl: avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png'
+        };
 
+        const totalGames = safeData.wins + safeData.losses;
+        const tierColor = TIER_COLORS[safeData.rank.tier] || TIER_COLORS['BRONZE'];
+        const posIcon = POSITION_ICONS[safeData.mainRole] || '⚽';
+
+        // Criar canvas
         const canvas = createCanvas(this.width, this.height);
         const ctx = canvas.getContext('2d');
 
-        const tierColors = TIER_COLORS[safeRank.tier] || TIER_COLORS['BRONZE'];
-        const rgb = this.hexToRgb(tierColors.primary);
-        const posConfig = POSITION_CONFIG[safeMainRole] || POSITION_CONFIG['Goleiro'];
-
-        // ====== 1. BACKGROUND GRADIENT ======
-        const bgGradient = ctx.createLinearGradient(0, 0, this.width, this.height);
-        bgGradient.addColorStop(0, this.colors.bg1);
-        bgGradient.addColorStop(1, this.colors.bg2);
-        ctx.fillStyle = bgGradient;
+        // ========================================
+        // 1. BACKGROUND COM GRADIENTE DIAGONAL
+        // ========================================
+        const gradient = ctx.createLinearGradient(0, 0, this.width, this.height);
+        gradient.addColorStop(0, this.colors.bg.dark);
+        gradient.addColorStop(0.5, this.colors.bg.medium);
+        gradient.addColorStop(1, this.colors.bg.light);
+        ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, this.width, this.height);
 
-        // Adicionar subtle pattern (noise)
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
-        for (let i = 0; i < 100; i++) {
-            const x = Math.random() * this.width;
-            const y = Math.random() * this.height;
-            ctx.fillRect(x, y, 1, 1);
-        }
+        // Overlay sutil do tier
+        const rgb = this.hexToRgb(tierColor.primary);
+        const tierOverlay = ctx.createRadialGradient(
+            this.width * 0.7, this.height * 0.3, 0,
+            this.width * 0.7, this.height * 0.3, this.width * 0.6
+        );
+        tierOverlay.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.15)`);
+        tierOverlay.addColorStop(1, 'transparent');
+        ctx.fillStyle = tierOverlay;
+        ctx.fillRect(0, 0, this.width, this.height);
 
-        // ====== 2. CARD PRINCIPAL (GLASSMORPHISM) ======
-        const cardX = this.padding;
-        const cardY = this.padding;
-        const cardW = this.width - (this.padding * 2);
-        const cardH = this.height - (this.padding * 2);
+        // ========================================
+        // 2. CONTAINER PRINCIPAL (CARD)
+        // ========================================
+        const margin = this.unit * 4; // 32px
+        const cardX = margin;
+        const cardY = margin;
+        const cardW = this.width - (margin * 2);
+        const cardH = this.height - (margin * 2);
+        const radius = this.unit * 3; // 24px
 
-        // Shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
-        ctx.shadowBlur = 32;
+        // Shadow do card
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 40;
         ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 8;
+        ctx.shadowOffsetY = 10;
 
-        // Card background
-        ctx.fillStyle = this.colors.cardBg;
-        this.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 20);
+        ctx.fillStyle = this.colors.card;
+        this.roundRect(ctx, cardX, cardY, cardW, cardH, radius);
         ctx.fill();
 
-        // Border
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        this.drawRoundedRect(ctx, cardX, cardY, cardW, cardH, 20);
-        ctx.stroke();
-
-        // Reset shadow
+        // Border sutil
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, cardX, cardY, cardW, cardH, radius);
+        ctx.stroke();
 
-        // ====== 3. HEADER - BRANDING + RANK BADGE ======
-        const headerY = cardY + 20;
+        // ========================================
+        // 3. LAYOUT INTERNO (GRID SYSTEM)
+        // ========================================
+        const contentPadding = this.unit * 5; // 40px
+        const contentX = cardX + contentPadding;
+        const contentY = cardY + contentPadding;
+        const contentW = cardW - (contentPadding * 2);
+        const contentH = cardH - (contentPadding * 2);
 
-        // Branding (esquerda)
-        this.drawText(ctx, '🏆 MANEIRO INHOUSE', cardX + 24, headerY + 10, 14, this.colors.textSecondary, true, 'left', false);
+        // ========================================
+        // 4. HEADER (BRANDING + RANK)
+        // ========================================
+        const headerH = this.unit * 8; // 64px
+
+        // Branding
+        this.drawText(
+            ctx,
+            '🏆 MANEIRO INHOUSE',
+            contentX,
+            contentY + this.unit,
+            12,
+            this.colors.text.muted,
+            'bold',
+            'left',
+            'top'
+        );
 
         // Rank Badge (direita)
-        const badgeW = 160;
-        const badgeH = 60;
-        const badgeX = cardX + cardW - badgeW - 24;
-        const badgeY = headerY - 10;
+        const badgeW = 180;
+        const badgeH = 56;
+        const badgeX = contentX + contentW - badgeW;
+        const badgeY = contentY;
 
-        // Badge gradient
-        const badgeGradient = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeH);
-        badgeGradient.addColorStop(0, tierColors.primary);
-        badgeGradient.addColorStop(1, tierColors.secondary);
+        // Badge background com gradiente
+        const badgeGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX, badgeY + badgeH);
+        badgeGrad.addColorStop(0, tierColor.primary);
+        badgeGrad.addColorStop(1, tierColor.secondary);
 
-        ctx.fillStyle = badgeGradient;
-        this.drawRoundedRect(ctx, badgeX, badgeY, badgeW, badgeH, 12);
-        ctx.fill();
-
-        // Badge shadow
         ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.4)`;
-        ctx.shadowBlur = 12;
-        ctx.fillRect(badgeX, badgeY, badgeW, badgeH);
+        ctx.shadowBlur = 16;
+        ctx.fillStyle = badgeGrad;
+        this.roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 12);
+        ctx.fill();
         ctx.shadowBlur = 0;
 
         // Badge text
-        this.drawText(ctx, safeRank.full_name.toUpperCase(), badgeX + badgeW / 2, badgeY + 20, 14, '#FFFFFF', true, 'center', true);
-        this.drawText(ctx, `${safeMmr} MMR`, badgeX + badgeW / 2, badgeY + 40, 12, 'rgba(255, 255, 255, 0.8)', false, 'center', false);
+        this.drawText(
+            ctx,
+            safeData.rank.full_name.toUpperCase(),
+            badgeX + badgeW / 2,
+            badgeY + 16,
+            14,
+            '#FFFFFF',
+            'bold',
+            'center',
+            'top'
+        );
+        this.drawText(
+            ctx,
+            `${safeData.mmr} MMR`,
+            badgeX + badgeW / 2,
+            badgeY + 34,
+            11,
+            'rgba(255, 255, 255, 0.85)',
+            'normal',
+            'center',
+            'top'
+        );
 
-        // ====== 4. PLAYER IDENTITY ======
-        const identityY = headerY + 80;
-        const avatarSize = 120;
-        const avatarX = cardX + 40;
-        const avatarY = identityY;
+        // ========================================
+        // 5. PLAYER SECTION (AVATAR + INFO)
+        // ========================================
+        const playerY = contentY + headerH + (this.unit * 4); // 32px gap
+        const avatarSize = 140;
+        const avatarX = contentX;
 
-        // Avatar circle com glow
+        // Avatar com borda e glow
         try {
-            const avatar = await loadImage(avatarUrl);
+            const avatar = await loadImage(safeData.avatarUrl);
 
             // Glow effect
-            ctx.shadowColor = tierColors.primary;
-            ctx.shadowBlur = 20;
+            ctx.shadowColor = tierColor.primary;
+            ctx.shadowBlur = 24;
             ctx.beginPath();
-            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
-            ctx.closePath();
+            ctx.arc(avatarX + avatarSize / 2, playerY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+            ctx.fillStyle = tierColor.primary;
             ctx.fill();
             ctx.shadowBlur = 0;
 
-            // Avatar
+            // Avatar circular
             ctx.save();
             ctx.beginPath();
-            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+            ctx.arc(avatarX + avatarSize / 2, playerY + avatarSize / 2, avatarSize / 2 - 4, 0, Math.PI * 2);
             ctx.closePath();
             ctx.clip();
-            ctx.drawImage(avatar, avatarX, avatarY, avatarSize, avatarSize);
+            ctx.drawImage(avatar, avatarX, playerY, avatarSize, avatarSize);
             ctx.restore();
 
             // Border
-            ctx.strokeStyle = tierColors.primary;
-            ctx.lineWidth = 4;
+            ctx.strokeStyle = tierColor.primary;
+            ctx.lineWidth = 5;
             ctx.beginPath();
-            ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
+            ctx.arc(avatarX + avatarSize / 2, playerY + avatarSize / 2, avatarSize / 2 - 2.5, 0, Math.PI * 2);
             ctx.stroke();
         } catch (error) {
             console.error('❌ Erro ao carregar avatar:', error);
         }
 
         // Player info (ao lado do avatar)
-        const infoX = avatarX + avatarSize + 24;
-        let infoY = avatarY + 30;
+        const infoX = avatarX + avatarSize + (this.unit * 4); // 32px gap
+        let infoY = playerY + this.unit * 2;
 
-        // Nome (adaptativo para nomes longos)
-        let nameFontSize = 40;
-        if (username.length > 15) nameFontSize = 32;
-        if (username.length > 25) nameFontSize = 28;
+        // Nome (adaptativo)
+        let nameSize = 48;
+        if (safeData.username.length > 15) nameSize = 40;
+        if (safeData.username.length > 20) nameSize = 32;
 
-        this.drawText(ctx, username, infoX, infoY, nameFontSize, this.colors.textPrimary, true, 'left', true);
+        this.drawText(
+            ctx,
+            safeData.username,
+            infoX,
+            infoY,
+            nameSize,
+            this.colors.text.primary,
+            'bold',
+            'left',
+            'top'
+        );
 
-        infoY += 50;
+        infoY += nameSize + this.unit * 2;
 
-        // Posição com ícone
-        this.drawText(ctx, `${posConfig.icon} ${safeMainRole}`, infoX, infoY, 20, this.colors.textSecondary, false, 'left', false);
+        // Posição
+        this.drawText(
+            ctx,
+            `${posIcon} ${safeData.mainRole}`,
+            infoX,
+            infoY,
+            22,
+            this.colors.text.secondary,
+            'normal',
+            'left',
+            'top'
+        );
 
-        // ====== 5. PERFORMANCE METRICS (3 CARDS) ======
-        const metricsY = identityY + 160;
-        const metricsX = cardX + 40;
-        const metricCardW = (cardW - 80 - 32) / 3; // 3 cards com gap de 16px
-        const metricCardH = 100;
-        const metricGap = 16;
+        // ========================================
+        // 6. STATS SECTION (3 CARDS ALINHADOS)
+        // ========================================
+        const statsY = playerY + avatarSize + (this.unit * 5); // 40px gap
+        const statCardH = 120;
+        const gap = this.unit * 3; // 24px
+        const statCardW = (contentW - (gap * 2)) / 3; // 3 cards com 2 gaps
 
-        // CARD 1: WINRATE (DESTAQUE)
-        let card1X = metricsX;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        this.drawRoundedRect(ctx, card1X, metricsY, metricCardW, metricCardH, 16);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        this.drawText(ctx, 'WINRATE', card1X + metricCardW / 2, metricsY + 20, 12, this.colors.textSecondary, true, 'center', false);
-
-        const winrateColor = safeWinrate >= 50 ? this.colors.success : this.colors.danger;
-        this.drawText(ctx, `${safeWinrate}%`, card1X + metricCardW / 2, metricsY + 50, 48, winrateColor, true, 'center', true);
-
-        // Progress bar
-        const progressY = metricsY + 80;
-        const progressW = metricCardW - 40;
-        const progressX = card1X + 20;
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        this.drawRoundedRect(ctx, progressX, progressY, progressW, 6, 3);
-        ctx.fill();
-
-        const fillW = (progressW * safeWinrate) / 100;
-        const fillGradient = ctx.createLinearGradient(progressX, progressY, progressX + fillW, progressY);
-        fillGradient.addColorStop(0, winrateColor);
-        fillGradient.addColorStop(1, winrateColor + '80');
-        ctx.fillStyle = fillGradient;
-        this.drawRoundedRect(ctx, progressX, progressY, fillW, 6, 3);
-        ctx.fill();
+        // CARD 1: WINRATE
+        const card1X = contentX;
+        this.drawStatCard(ctx, {
+            x: card1X,
+            y: statsY,
+            width: statCardW,
+            height: statCardH,
+            label: 'WINRATE',
+            value: `${safeData.winrate}%`,
+            color: safeData.winrate >= 50 ? this.colors.accent.success : this.colors.accent.danger,
+            showProgress: true,
+            progress: safeData.winrate
+        });
 
         // CARD 2: PARTIDAS
-        let card2X = card1X + metricCardW + metricGap;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        this.drawRoundedRect(ctx, card2X, metricsY, metricCardW, metricCardH, 16);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.stroke();
+        const card2X = card1X + statCardW + gap;
+        this.drawStatCard(ctx, {
+            x: card2X,
+            y: statsY,
+            width: statCardW,
+            height: statCardH,
+            label: 'PARTIDAS',
+            value: `${totalGames}`,
+            color: this.colors.accent.info,
+            showProgress: false
+        });
 
-        this.drawText(ctx, 'PARTIDAS', card2X + metricCardW / 2, metricsY + 20, 12, this.colors.textSecondary, true, 'center', false);
-        this.drawText(ctx, `${totalGames}`, card2X + metricCardW / 2, metricsY + 55, 36, this.colors.textPrimary, true, 'center', true);
+        // CARD 3: W-L
+        const card3X = card2X + statCardW + gap;
+        this.drawWLCard(ctx, {
+            x: card3X,
+            y: statsY,
+            width: statCardW,
+            height: statCardH,
+            wins: safeData.wins,
+            losses: safeData.losses
+        });
 
-        // CARD 3: W-L RECORD
-        let card3X = card2X + metricCardW + metricGap;
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-        this.drawRoundedRect(ctx, card3X, metricsY, metricCardW, metricCardH, 16);
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        ctx.stroke();
+        // ========================================
+        // 7. MINI STATS (3 CARDS PEQUENOS)
+        // ========================================
+        const miniStatsY = statsY + statCardH + (this.unit * 3); // 24px gap
+        const miniCardH = 90;
+        const miniCardW = statCardW;
 
-        this.drawText(ctx, 'DESEMPENHO', card3X + metricCardW / 2, metricsY + 20, 12, this.colors.textSecondary, true, 'center', false);
-
-        // W-L lado a lado
-        const recordY = metricsY + 55;
-        const centerX = card3X + metricCardW / 2;
-
-        this.drawText(ctx, `${safeWins}W`, centerX - 30, recordY, 28, this.colors.success, true, 'right', true);
-        this.drawText(ctx, '-', centerX, recordY, 28, this.colors.textMuted, false, 'center', false);
-        this.drawText(ctx, `${safeLosses}L`, centerX + 30, recordY, 28, this.colors.danger, true, 'left', true);
-
-        // ====== 6. FEATURED STATS (3 CARDS) ======
-        const statsY = metricsY + metricCardH + 20;
-        const statCardW = metricCardW - 20;
-        const statCardH = 100;
+        const miniStats = [
+            { icon: '🧤', label: 'DEFESAS', value: '--' },
+            { icon: '⚡', label: 'PASSES', value: '--' },
+            { icon: '🛡️', label: 'INTERCEP.', value: '--' }
+        ];
 
         for (let i = 0; i < 3; i++) {
-            const statX = metricsX + (i * (statCardW + metricGap + 20));
-            const stat = posConfig.stats[i];
-
-            ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
-            this.drawRoundedRect(ctx, statX, statsY, statCardW, statCardH, 12);
-            ctx.fill();
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
-            ctx.stroke();
-
-            // Ícone
-            this.drawText(ctx, stat.icon, statX + statCardW / 2, statsY + 25, 32, this.colors.textPrimary, false, 'center', false);
-
-            // Valor (placeholder - você pode adicionar stats reais)
-            const mockValue = Math.floor(Math.random() * 150) + 50;
-            this.drawText(ctx, `${mockValue}`, statX + statCardW / 2, statsY + 55, 28, this.colors.textPrimary, true, 'center', true);
-
-            // Label
-            this.drawText(ctx, stat.label, statX + statCardW / 2, statsY + 80, 11, this.colors.textSecondary, true, 'center', false);
+            const x = contentX + (i * (miniCardW + gap));
+            this.drawMiniStatCard(ctx, {
+                x,
+                y: miniStatsY,
+                width: miniCardW,
+                height: miniCardH,
+                icon: miniStats[i].icon,
+                label: miniStats[i].label,
+                value: miniStats[i].value
+            });
         }
 
-        console.log('✅ Card PREMIUM gerado com sucesso!');
+        console.log('✅ [PREMIUM] Card gerado com sucesso!');
         return canvas.toBuffer('image/png');
+    }
+
+    // ========================================
+    // COMPONENTES REUTILIZÁVEIS
+    // ========================================
+
+    drawStatCard(ctx, config) {
+        const { x, y, width, height, label, value, color, showProgress, progress } = config;
+
+        // Background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        this.roundRect(ctx, x, y, width, height, 16);
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, y, width, height, 16);
+        ctx.stroke();
+
+        // Label
+        this.drawText(
+            ctx,
+            label,
+            x + width / 2,
+            y + 16,
+            11,
+            this.colors.text.muted,
+            'bold',
+            'center',
+            'top'
+        );
+
+        // Value
+        this.drawText(
+            ctx,
+            value,
+            x + width / 2,
+            y + 42,
+            42,
+            color,
+            'bold',
+            'center',
+            'top'
+        );
+
+        // Progress bar (opcional)
+        if (showProgress) {
+            const barY = y + height - 24;
+            const barW = width - 32;
+            const barX = x + 16;
+            const barH = 6;
+
+            // Background bar
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            this.roundRect(ctx, barX, barY, barW, barH, 3);
+            ctx.fill();
+
+            // Fill bar
+            const fillW = (barW * progress) / 100;
+            ctx.fillStyle = color;
+            this.roundRect(ctx, barX, barY, fillW, barH, 3);
+            ctx.fill();
+        }
+    }
+
+    drawWLCard(ctx, config) {
+        const { x, y, width, height, wins, losses } = config;
+
+        // Background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+        this.roundRect(ctx, x, y, width, height, 16);
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, y, width, height, 16);
+        ctx.stroke();
+
+        // Label
+        this.drawText(
+            ctx,
+            'DESEMPENHO',
+            x + width / 2,
+            y + 16,
+            11,
+            this.colors.text.muted,
+            'bold',
+            'center',
+            'top'
+        );
+
+        // W-L centralizado
+        const centerX = x + width / 2;
+        const centerY = y + 60;
+
+        this.drawText(ctx, `${wins}W`, centerX - 24, centerY, 32, this.colors.accent.success, 'bold', 'right', 'middle');
+        this.drawText(ctx, '-', centerX, centerY, 32, this.colors.text.muted, 'normal', 'center', 'middle');
+        this.drawText(ctx, `${losses}L`, centerX + 24, centerY, 32, this.colors.accent.danger, 'bold', 'left', 'middle');
+    }
+
+    drawMiniStatCard(ctx, config) {
+        const { x, y, width, height, icon, label, value } = config;
+
+        // Background
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.02)';
+        this.roundRect(ctx, x, y, width, height, 12);
+        ctx.fill();
+
+        // Border
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.06)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, y, width, height, 12);
+        ctx.stroke();
+
+        // Icon
+        this.drawText(
+            ctx,
+            icon,
+            x + width / 2,
+            y + 16,
+            28,
+            this.colors.text.primary,
+            'normal',
+            'center',
+            'top'
+        );
+
+        // Value
+        this.drawText(
+            ctx,
+            value,
+            x + width / 2,
+            y + 50,
+            22,
+            this.colors.text.primary,
+            'bold',
+            'center',
+            'top'
+        );
+
+        // Label
+        this.drawText(
+            ctx,
+            label,
+            x + width / 2,
+            y + height - 14,
+            10,
+            this.colors.text.muted,
+            'bold',
+            'center',
+            'top'
+        );
     }
 }
 
