@@ -121,8 +121,8 @@ async function fetchUserData(discordId) {
                 t.tag as team_tag,
                 COUNT(DISTINCT CASE WHEN mp.team = m.winner_team THEN m.id END) as wins,
                 COUNT(DISTINCT CASE WHEN mp.team != m.winner_team AND m.winner_team IS NOT NULL THEN m.id END) as losses,
-                COALESCE(SUM(ps.defenses), 0) as total_defenses,
-                COALESCE(SUM(ps.intercepts), 0) as total_intercepts,
+                COALESCE(SUM(ps.saves), 0) as total_defenses,
+                COALESCE(SUM(ps.interceptions), 0) as total_intercepts,
                 COALESCE(SUM(ps.passes), 0) as total_passes,
                 COALESCE(SUM(ps.assists), 0) as total_assists,
                 COALESCE(SUM(ps.goals), 0) as total_goals
