@@ -1,533 +1,383 @@
 /**
- * Gerador de Card de Perfil PREMIUM - Maneiro Inhouse
- * Design UI/UX profissional - ZERO problemas de alinhamento
+ * Premium Profile Card Image Generator
+ *
+ * Gera cards visuais impactantes estilo Faceit/GamersClub com:
+ * - Gradientes baseados nas cores do rank
+ * - Glassmorphism (vidro fosco)
+ * - Barras de progresso animadas
+ * - Fontes modernas e sombras suaves
  */
 
-const { createCanvas, loadImage } = require('@napi-rs/canvas');
+const { createCanvas, loadImage, registerFont } = require('@napi-rs/canvas');
+const path = require('path');
+const { Logger } = require('../../logger');
 
-// === PALETA DE CORES POR TIER ===
-const TIER_THEMES = {
-    'BRONZE': {
-        primary: '#CD7F32',
-        secondary: '#A0522D',
-        glow: 'rgba(205, 127, 50, 0.3)',
-        bg: 'rgba(205, 127, 50, 0.08)'
-    },
-    'PRATA': {
-        primary: '#C0C0C0',
-        secondary: '#A8A8A8',
-        glow: 'rgba(192, 192, 192, 0.3)',
-        bg: 'rgba(192, 192, 192, 0.08)'
-    },
-    'OURO': {
-        primary: '#FFD700',
-        secondary: '#FFA500',
-        glow: 'rgba(255, 215, 0, 0.4)',
-        bg: 'rgba(255, 215, 0, 0.08)'
-    },
-    'PLATINA': {
-        primary: '#00CED1',
-        secondary: '#20B2AA',
-        glow: 'rgba(0, 206, 209, 0.3)',
-        bg: 'rgba(0, 206, 209, 0.08)'
-    },
-    'DIAMANTE': {
-        primary: '#B9F2FF',
-        secondary: '#00BFFF',
-        glow: 'rgba(185, 242, 255, 0.3)',
-        bg: 'rgba(185, 242, 255, 0.08)'
-    },
-    'MESTRE': {
-        primary: '#9333EA',
-        secondary: '#7C3AED',
-        glow: 'rgba(147, 51, 234, 0.4)',
-        bg: 'rgba(147, 51, 234, 0.08)'
-    },
-    'ELITE': {
-        primary: '#EF4444',
-        secondary: '#DC2626',
-        glow: 'rgba(239, 68, 68, 0.4)',
-        bg: 'rgba(239, 68, 68, 0.08)'
-    }
+/**
+ * Configuração de cores dos tiers (sincronizado com Rank.php)
+ */
+const TIER_COLORS = {
+    'BRONZE': { primary: '#CD7F32', secondary: '#8B4513', icon: '🥉' },
+    'PRATA': { primary: '#C0C0C0', secondary: '#A8A8A8', icon: '🥈' },
+    'OURO': { primary: '#FFD700', secondary: '#FFA500', icon: '🥇' },
+    'PLATINA': { primary: '#00CED1', secondary: '#1E90FF', icon: '💠' },
+    'DIAMANTE': { primary: '#B9F2FF', secondary: '#4169E1', icon: '💎' },
+    'MESTRE': { primary: '#9333EA', secondary: '#7C3AED', icon: '👑' },
+    'ELITE': { primary: '#EF4444', secondary: '#DC2626', icon: '🔥' }
 };
 
 class ProfileCardGenerator {
     constructor() {
-        // Dimensões otimizadas para Discord
-        this.width = 1200;
-        this.height = 600;
+        this.width = 900;
+        this.height = 500;
+        this.loaded = false;
 
-        // Sistema de Grid de 8px (garante alinhamento perfeito)
-        this.grid = 8;
-
-        // Paleta base
-        this.colors = {
-            bg: {
-                primary: '#0D1117',
-                secondary: '#161B22',
-                card: '#1C2128'
-            },
-            text: {
-                primary: '#E6EDF3',
-                secondary: '#7D8590',
-                muted: '#484F58'
-            },
-            success: '#3FB950',
-            danger: '#F85149',
-            info: '#58A6FF'
-        };
+        // Tentar registrar fontes customizadas (opcional)
+        try {
+            const fontsDir = path.join(__dirname, '../../assets/fonts');
+            // Você pode baixar fontes como Inter, Poppins, etc. e colocar aqui
+            // registerFont(path.join(fontsDir, 'Inter-Bold.ttf'), { family: 'Inter', weight: 'bold' });
+            // registerFont(path.join(fontsDir, 'Inter-Regular.ttf'), { family: 'Inter' });
+        } catch (error) {
+            Logger.warn('⚠️ Fontes customizadas não encontradas, usando fontes do sistema');
+        }
     }
 
-    getGrid(multiplier) {
-        return this.grid * multiplier;
+    /**
+     * Converte HEX para RGB
+     */
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? {
+            r: parseInt(result[1], 16),
+            g: parseInt(result[2], 16),
+            b: parseInt(result[3], 16)
+        } : { r: 255, g: 255, b: 255 };
     }
 
-    drawText(ctx, text, x, y, options = {}) {
-        const {
-            size = 16,
-            weight = 'normal',
-            color = this.colors.text.primary,
-            align = 'left',
-            baseline = 'alphabetic',
-            maxWidth = null
-        } = options;
+    /**
+     * Desenha background com gradiente baseado no rank
+     */
+    drawBackground(ctx, tierColors) {
+        const { primary, secondary } = tierColors;
 
-        ctx.save();
-        ctx.font = `${weight} ${size}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-        ctx.fillStyle = color;
-        ctx.textAlign = align;
-        ctx.textBaseline = baseline;
+        // Fundo escuro base
+        ctx.fillStyle = '#0a0e1a';
+        ctx.fillRect(0, 0, this.width, this.height);
 
-        if (maxWidth) {
-            ctx.fillText(text, x, y, maxWidth);
-        } else {
-            ctx.fillText(text, x, y);
+        // Gradiente radial do rank (top-right)
+        const gradient = ctx.createRadialGradient(this.width * 0.8, this.height * 0.2, 0, this.width * 0.8, this.height * 0.2, this.width * 0.7);
+        const primaryRgb = this.hexToRgb(primary);
+        const secondaryRgb = this.hexToRgb(secondary);
+
+        gradient.addColorStop(0, `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.3)`);
+        gradient.addColorStop(0.5, `rgba(${secondaryRgb.r}, ${secondaryRgb.g}, ${secondaryRgb.b}, 0.15)`);
+        gradient.addColorStop(1, 'rgba(10, 14, 26, 0)');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, this.width, this.height);
+
+        // Efeito de noise/textura (opcional)
+        this.drawNoise(ctx, 0.03);
+    }
+
+    /**
+     * Adiciona textura de ruído sutil
+     */
+    drawNoise(ctx, opacity = 0.03) {
+        const imageData = ctx.getImageData(0, 0, this.width, this.height);
+        const pixels = imageData.data;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+            const noise = (Math.random() - 0.5) * 255 * opacity;
+            pixels[i] += noise;
+            pixels[i + 1] += noise;
+            pixels[i + 2] += noise;
         }
 
-        ctx.restore();
+        ctx.putImageData(imageData, 0, 0);
     }
 
-    roundRect(ctx, x, y, w, h, r) {
-        if (w < 2 * r) r = w / 2;
-        if (h < 2 * r) r = h / 2;
+    /**
+     * Desenha card com glassmorphism
+     */
+    drawGlassCard(ctx, x, y, width, height, borderColor, blur = 20) {
+        // Sombra externa
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 30;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 10;
 
+        // Background semi-transparente (vidro fosco)
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        this.roundRect(ctx, x, y, width, height, 20, true, false);
+
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+
+        // Borda com cor do rank
+        const borderRgb = this.hexToRgb(borderColor);
+        ctx.strokeStyle = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.3)`;
+        ctx.lineWidth = 2;
+        this.roundRect(ctx, x, y, width, height, 20, false, true);
+
+        // Brilho interno (top)
+        const innerGlow = ctx.createLinearGradient(x, y, x, y + 100);
+        innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
+        innerGlow.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = innerGlow;
+        this.roundRect(ctx, x, y, width, 100, 20, true, false);
+    }
+
+    /**
+     * Desenha retângulo com bordas arredondadas
+     */
+    roundRect(ctx, x, y, width, height, radius, fill, stroke) {
         ctx.beginPath();
-        ctx.moveTo(x + r, y);
-        ctx.arcTo(x + w, y, x + w, y + h, r);
-        ctx.arcTo(x + w, y + h, x, y + h, r);
-        ctx.arcTo(x, y + h, x, y, r);
-        ctx.arcTo(x, y, x + w, y, r);
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
         ctx.closePath();
+
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
     }
 
+    /**
+     * Desenha avatar circular com borda colorida
+     */
+    async drawAvatar(ctx, avatarUrl, x, y, size, borderColor) {
+        try {
+            const avatar = await loadImage(avatarUrl);
+
+            // Sombra do avatar
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 8;
+
+            // Borda colorida
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, size / 2 + 5, 0, Math.PI * 2);
+            const borderRgb = this.hexToRgb(borderColor);
+            ctx.fillStyle = `rgba(${borderRgb.r}, ${borderRgb.g}, ${borderRgb.b}, 0.8)`;
+            ctx.fill();
+
+            // Reset shadow
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+
+            // Avatar circular
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+
+            ctx.drawImage(avatar, x, y, size, size);
+            ctx.restore();
+
+        } catch (error) {
+            Logger.warn(`⚠️ Erro ao carregar avatar: ${error.message}`);
+            // Fallback: círculo cinza
+            ctx.fillStyle = '#2a2e3a';
+            ctx.beginPath();
+            ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    /**
+     * Desenha barra de progresso moderna
+     */
+    drawProgressBar(ctx, x, y, width, height, percent, color) {
+        // Background da barra
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+        this.roundRect(ctx, x, y, width, height, height / 2, true, false);
+
+        // Borda
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.lineWidth = 1;
+        this.roundRect(ctx, x, y, width, height, height / 2, false, true);
+
+        // Barra de progresso
+        const fillWidth = (width - 4) * (percent / 100);
+        if (fillWidth > 0) {
+            const gradient = ctx.createLinearGradient(x, y, x + fillWidth, y);
+            const rgb = this.hexToRgb(color);
+            gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`);
+            gradient.addColorStop(1, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`);
+
+            ctx.fillStyle = gradient;
+            this.roundRect(ctx, x + 2, y + 2, fillWidth, height - 4, (height - 4) / 2, true, false);
+
+            // Glow effect
+            ctx.shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+            ctx.shadowBlur = 15;
+            this.roundRect(ctx, x + 2, y + 2, fillWidth, height - 4, (height - 4) / 2, true, false);
+            ctx.shadowColor = 'transparent';
+            ctx.shadowBlur = 0;
+        }
+    }
+
+    /**
+     * Formata número com separador de milhares
+     */
+    formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    }
+
+    /**
+     * Gera o card de perfil completo
+     * Updated: 2025-12-16 - Layout simplificado com todas informações visíveis
+     */
     async generateProfileCard(userData) {
         const {
             username,
+            discriminator,
+            avatarUrl,
             rank,
             mmr,
             wins,
             losses,
             winrate,
+            kda,
             mainRole,
-            avatarUrl
+            progressPercent = 0
         } = userData;
 
-        console.log('🎨 Gerando card profissional:', username);
-
-        // Validação e defaults
-        const data = {
-            username: username || 'Jogador',
-            rank: rank || { tier: 'BRONZE', full_name: 'Bronze I' },
-            mmr: mmr ?? 0,
-            wins: wins ?? 0,
-            losses: losses ?? 0,
-            winrate: winrate ?? 0,
-            mainRole: mainRole || 'Jogador',
-            avatarUrl: avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png'
-        };
-
-        const totalGames = data.wins + data.losses;
-        const theme = TIER_THEMES[data.rank.tier] || TIER_THEMES['BRONZE'];
+        // LOG: Dados recebidos pelo gerador
+        console.log('🎨 ImageGenerator - Dados recebidos:');
+        console.log(`   - username: ${username}`);
+        console.log(`   - rank: ${rank?.full_name}`);
+        console.log(`   - mmr: ${mmr}`);
+        console.log(`   - wins: ${wins}`);
+        console.log(`   - losses: ${losses}`);
+        console.log(`   - winrate: ${winrate}`);
+        console.log(`   - mainRole: ${mainRole}`);
 
         const canvas = createCanvas(this.width, this.height);
         const ctx = canvas.getContext('2d');
 
-        // ============================================================
-        // 1. BACKGROUND (gradiente suave)
-        // ============================================================
-        const bgGrad = ctx.createLinearGradient(0, 0, this.width, this.height);
-        bgGrad.addColorStop(0, this.colors.bg.primary);
-        bgGrad.addColorStop(0.5, this.colors.bg.secondary);
-        bgGrad.addColorStop(1, this.colors.bg.primary);
-        ctx.fillStyle = bgGrad;
-        ctx.fillRect(0, 0, this.width, this.height);
+        // Configuração de texto - usar baseline padrão para fontes funcionarem
+        ctx.textBaseline = 'alphabetic';
 
-        // Glow sutil do tier
-        const glowGrad = ctx.createRadialGradient(
-            this.width * 0.85, this.height * 0.3, 0,
-            this.width * 0.85, this.height * 0.3, this.width * 0.5
-        );
-        glowGrad.addColorStop(0, theme.glow);
-        glowGrad.addColorStop(1, 'transparent');
-        ctx.fillStyle = glowGrad;
-        ctx.fillRect(0, 0, this.width, this.height);
+        // Obter cores do tier
+        const tierColors = TIER_COLORS[rank.tier] || TIER_COLORS['BRONZE'];
 
-        // ============================================================
-        // 2. CONTAINER PRINCIPAL
-        // ============================================================
-        const padding = this.getGrid(4); // 32px
-        const containerX = padding;
-        const containerY = padding;
-        const containerW = this.width - padding * 2;
-        const containerH = this.height - padding * 2;
+        // 1. Background
+        this.drawBackground(ctx, tierColors);
 
-        // Card com shadow
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-        ctx.shadowBlur = 40;
-        ctx.shadowOffsetY = 10;
+        // 2. Card principal com glassmorphism
+        const cardX = 40;
+        const cardY = 40;
+        const cardWidth = this.width - 80;
+        const cardHeight = this.height - 80;
+        this.drawGlassCard(ctx, cardX, cardY, cardWidth, cardHeight, tierColors.primary);
 
-        ctx.fillStyle = this.colors.bg.card;
-        this.roundRect(ctx, containerX, containerY, containerW, containerH, 16);
-        ctx.fill();
+        // 3. Avatar (esquerda)
+        const avatarSize = 140;
+        const avatarX = cardX + 40;
+        const avatarY = cardY + 40;
+        await this.drawAvatar(ctx, avatarUrl, avatarX, avatarY, avatarSize, tierColors.primary);
 
-        // Border sutil
+        // 4. Nome do usuário
+        const textX = avatarX + avatarSize + 30;
+        let currentY = avatarY + 36; // Ajustar Y para alphabetic baseline
+
+        ctx.font = '36px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(username, textX, currentY);
+
+        console.log(`📝 Desenhando username: "${username}" em (${textX}, ${currentY})`);
+
+        if (discriminator && discriminator !== '0') {
+            ctx.font = '24px sans-serif';
+            ctx.fillStyle = '#888888';
+            ctx.fillText(`#${discriminator}`, textX + ctx.measureText(username).width + 10, currentY);
+        }
+
+        currentY += 50;
+
+        // 5. Título do Rank (GRANDE e impactante)
+        ctx.font = '48px sans-serif';
+        const gradient = ctx.createLinearGradient(textX, currentY, textX + 300, currentY);
+        const primaryRgb = this.hexToRgb(tierColors.primary);
+        const secondaryRgb = this.hexToRgb(tierColors.secondary);
+        gradient.addColorStop(0, tierColors.primary);
+        gradient.addColorStop(1, tierColors.secondary);
+        ctx.fillStyle = gradient;
+
+        // Ícone + Nome do Rank
+        ctx.fillText(`${tierColors.icon} ${rank.full_name.toUpperCase()}`, textX, currentY);
+
+        // Glow no rank
+        ctx.shadowColor = `rgba(${primaryRgb.r}, ${primaryRgb.g}, ${primaryRgb.b}, 0.8)`;
+        ctx.shadowBlur = 25;
+        ctx.fillText(`${tierColors.icon} ${rank.full_name.toUpperCase()}`, textX, currentY);
         ctx.shadowColor = 'transparent';
         ctx.shadowBlur = 0;
-        ctx.strokeStyle = theme.primary + '40'; // 25% opacity
-        ctx.lineWidth = 1;
-        this.roundRect(ctx, containerX, containerY, containerW, containerH, 16);
-        ctx.stroke();
 
-        // ============================================================
-        // 3. HEADER (Grid: linha 1)
-        // ============================================================
-        const headerY = containerY + this.getGrid(5); // 40px
-        const contentX = containerX + this.getGrid(5);
+        currentY += 60;
 
-        // Logo texto
-        this.drawText(ctx, '🏆 MANEIRO INHOUSE', contentX, headerY, {
-            size: 14,
-            weight: 'bold',
-            color: this.colors.text.secondary,
-            baseline: 'top'
-        });
+        // 6. MMR
+        ctx.font = '20px sans-serif';
+        ctx.fillStyle = '#aaaaaa';
+        ctx.fillText(`${this.formatNumber(mmr)} MMR`, textX, currentY);
 
-        // Rank badge (direita)
-        const badgeW = 200;
-        const badgeH = 64;
-        const badgeX = containerX + containerW - badgeW - this.getGrid(5);
-        const badgeY = headerY - 8;
+        currentY += 40;
 
-        // Badge background
-        const badgeGrad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeW, badgeY + badgeH);
-        badgeGrad.addColorStop(0, theme.primary);
-        badgeGrad.addColorStop(1, theme.secondary);
+        // 7. Stats em linha (mais visível)
+        const totalGames = wins + losses;
+        ctx.font = '18px sans-serif';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillText(`📊 ${wins}W - ${losses}L (${totalGames} partidas)`, textX, currentY);
 
-        ctx.fillStyle = badgeGrad;
-        this.roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 12);
-        ctx.fill();
+        currentY += 35;
 
-        // Badge text
-        this.drawText(ctx, data.rank.full_name.toUpperCase(), badgeX + badgeW / 2, badgeY + 22, {
-            size: 18,
-            weight: 'bold',
-            color: '#000000',
-            align: 'center',
-            baseline: 'top'
-        });
+        // 8. Winrate e Posição
+        ctx.font = '24px sans-serif';
+        const winrateColor = winrate >= 50 ? '#4ade80' : '#f87171';
+        ctx.fillStyle = winrateColor;
+        ctx.fillText(`✓ Winrate: ${winrate}%`, textX, currentY);
 
-        this.drawText(ctx, `${data.mmr} MMR`, badgeX + badgeW / 2, badgeY + 43, {
-            size: 14,
-            color: 'rgba(0, 0, 0, 0.7)',
-            align: 'center',
-            baseline: 'top'
-        });
-
-        // ============================================================
-        // 4. PLAYER SECTION (Grid: linha 2)
-        // ============================================================
-        const playerY = headerY + this.getGrid(12); // ~96px
-        const avatarSize = 120;
-        const avatarX = contentX + avatarSize / 2;
-        const avatarY = playerY + avatarSize / 2;
-
-        // Avatar com glow
-        try {
-            const avatar = await loadImage(data.avatarUrl);
-
-            // Glow
-            ctx.shadowColor = theme.primary;
-            ctx.shadowBlur = 30;
-            ctx.beginPath();
-            ctx.arc(avatarX, avatarY, avatarSize / 2, 0, Math.PI * 2);
-            ctx.fillStyle = theme.primary;
-            ctx.fill();
-            ctx.shadowBlur = 0;
-
-            // Avatar
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(avatarX, avatarY, avatarSize / 2 - 4, 0, Math.PI * 2);
-            ctx.clip();
-            ctx.drawImage(
-                avatar,
-                avatarX - avatarSize / 2,
-                avatarY - avatarSize / 2,
-                avatarSize,
-                avatarSize
-            );
-            ctx.restore();
-
-            // Border
-            ctx.strokeStyle = theme.primary;
-            ctx.lineWidth = 4;
-            ctx.beginPath();
-            ctx.arc(avatarX, avatarY, avatarSize / 2 - 2, 0, Math.PI * 2);
-            ctx.stroke();
-        } catch (error) {
-            console.error('❌ Avatar:', error.message);
+        if (mainRole) {
+            ctx.fillStyle = '#a78bfa';
+            ctx.fillText(`  •  Posição: ${mainRole}`, textX + 230, currentY);
         }
 
-        // Nome e posição (ao lado do avatar)
-        const infoX = contentX + avatarSize + this.getGrid(4);
+        currentY += 40;
 
-        // Nome
-        let nameSize = 44;
-        if (data.username.length > 12) nameSize = 36;
-        if (data.username.length > 18) nameSize = 28;
+        // 9. Barra de Progresso (se aplicável)
+        if (progressPercent > 0 && rank.tier !== 'ELITE') {
+            const barWidth = 350;
+            const barHeight = 14;
+            this.drawProgressBar(ctx, textX, currentY, barWidth, barHeight, progressPercent, tierColors.primary);
 
-        this.drawText(ctx, data.username, infoX, playerY + 20, {
-            size: nameSize,
-            weight: 'bold',
-            color: this.colors.text.primary,
-            baseline: 'top'
-        });
-
-        // Posição
-        this.drawText(ctx, data.mainRole, infoX, playerY + 20 + nameSize + 12, {
-            size: 18,
-            color: theme.primary,
-            baseline: 'top'
-        });
-
-        // ============================================================
-        // 5. STATS GRID (Grid: linhas 3 e 4)
-        // ============================================================
-        const statsY = playerY + avatarSize + this.getGrid(5);
-        const statGap = this.getGrid(3); // 24px
-        const statCardW = (containerW - this.getGrid(10) - statGap * 2) / 3;
-        const statCardH = 140;
-
-        // Card 1: WINRATE
-        const stat1X = contentX;
-        this.drawStatBox(ctx, {
-            x: stat1X,
-            y: statsY,
-            width: statCardW,
-            height: statCardH,
-            label: 'WINRATE',
-            value: `${data.winrate}%`,
-            color: data.winrate >= 50 ? this.colors.success : this.colors.danger,
-            theme,
-            showBar: true,
-            barProgress: data.winrate
-        });
-
-        // Card 2: PARTIDAS
-        const stat2X = stat1X + statCardW + statGap;
-        this.drawStatBox(ctx, {
-            x: stat2X,
-            y: statsY,
-            width: statCardW,
-            height: statCardH,
-            label: 'PARTIDAS',
-            value: `${totalGames}`,
-            color: this.colors.info,
-            theme,
-            showBar: false
-        });
-
-        // Card 3: DESEMPENHO
-        const stat3X = stat2X + statCardW + statGap;
-        this.drawWLBox(ctx, {
-            x: stat3X,
-            y: statsY,
-            width: statCardW,
-            height: statCardH,
-            wins: data.wins,
-            losses: data.losses,
-            theme
-        });
-
-        // ============================================================
-        // 6. MINI STATS (Grid: linha 5)
-        // ============================================================
-        const miniY = statsY + statCardH + statGap;
-        const miniH = 100;
-
-        const miniStats = [
-            { icon: '🧤', label: 'DEFESAS', value: 0 },
-            { icon: '⚡', label: 'PASSES', value: 0 },
-            { icon: '🛡️', label: 'INTERCEP.', value: 0 }
-        ];
-
-        for (let i = 0; i < 3; i++) {
-            this.drawMiniBox(ctx, {
-                x: stat1X + i * (statCardW + statGap),
-                y: miniY,
-                width: statCardW,
-                height: miniH,
-                icon: miniStats[i].icon,
-                label: miniStats[i].label,
-                value: miniStats[i].value,
-                theme
-            });
+            // Label do progresso
+            ctx.font = '13px Arial, sans-serif';
+            ctx.fillStyle = '#cccccc';
+            ctx.fillText(`${progressPercent}% para próxima divisão`, textX + barWidth + 15, currentY - 2);
         }
 
-        console.log('✅ Card profissional gerado!');
+        // Reset text align
+        ctx.textAlign = 'left';
+
+        // 9. Marca d'água
+        ctx.font = '10px Arial, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.textAlign = 'right';
+        ctx.fillText('Generated by Rematch Inhouse Bot', this.width - 50, this.height - 20);
+
         return canvas.toBuffer('image/png');
-    }
-
-    // ============================================================
-    // COMPONENTES
-    // ============================================================
-
-    drawStatBox(ctx, { x, y, width, height, label, value, color, theme, showBar, barProgress }) {
-        // Background
-        ctx.fillStyle = theme.bg;
-        this.roundRect(ctx, x, y, width, height, 12);
-        ctx.fill();
-
-        // Border
-        ctx.strokeStyle = theme.primary + '30';
-        ctx.lineWidth = 1;
-        this.roundRect(ctx, x, y, width, height, 12);
-        ctx.stroke();
-
-        // Label
-        this.drawText(ctx, label, x + width / 2, y + 20, {
-            size: 11,
-            weight: 'bold',
-            color: this.colors.text.secondary,
-            align: 'center',
-            baseline: 'top'
-        });
-
-        // Value
-        this.drawText(ctx, value, x + width / 2, y + 50, {
-            size: 48,
-            weight: 'bold',
-            color: color,
-            align: 'center',
-            baseline: 'top'
-        });
-
-        // Progress bar
-        if (showBar && barProgress > 0) {
-            const barY = y + height - 28;
-            const barW = width - 32;
-            const barX = x + 16;
-            const barH = 8;
-
-            // Background
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
-            this.roundRect(ctx, barX, barY, barW, barH, 4);
-            ctx.fill();
-
-            // Fill
-            const fillW = (barW * Math.min(barProgress, 100)) / 100;
-            ctx.fillStyle = color;
-            this.roundRect(ctx, barX, barY, fillW, barH, 4);
-            ctx.fill();
-        }
-    }
-
-    drawWLBox(ctx, { x, y, width, height, wins, losses, theme }) {
-        // Background
-        ctx.fillStyle = theme.bg;
-        this.roundRect(ctx, x, y, width, height, 12);
-        ctx.fill();
-
-        // Border
-        ctx.strokeStyle = theme.primary + '30';
-        ctx.lineWidth = 1;
-        this.roundRect(ctx, x, y, width, height, 12);
-        ctx.stroke();
-
-        // Label
-        this.drawText(ctx, 'DESEMPENHO', x + width / 2, y + 20, {
-            size: 11,
-            weight: 'bold',
-            color: this.colors.text.secondary,
-            align: 'center',
-            baseline: 'top'
-        });
-
-        // W-L
-        const centerY = y + 70;
-        const centerX = x + width / 2;
-
-        this.drawText(ctx, `${wins}W`, centerX - 25, centerY, {
-            size: 36,
-            weight: 'bold',
-            color: this.colors.success,
-            align: 'right',
-            baseline: 'middle'
-        });
-
-        this.drawText(ctx, '-', centerX, centerY, {
-            size: 36,
-            color: this.colors.text.muted,
-            align: 'center',
-            baseline: 'middle'
-        });
-
-        this.drawText(ctx, `${losses}L`, centerX + 25, centerY, {
-            size: 36,
-            weight: 'bold',
-            color: this.colors.danger,
-            align: 'left',
-            baseline: 'middle'
-        });
-    }
-
-    drawMiniBox(ctx, { x, y, width, height, icon, label, value, theme }) {
-        // Background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-        this.roundRect(ctx, x, y, width, height, 10);
-        ctx.fill();
-
-        // Border
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
-        ctx.lineWidth = 1;
-        this.roundRect(ctx, x, y, width, height, 10);
-        ctx.stroke();
-
-        // Icon
-        this.drawText(ctx, icon, x + width / 2, y + 20, {
-            size: 28,
-            align: 'center',
-            baseline: 'top'
-        });
-
-        // Value
-        const displayValue = value > 0 ? value.toString() : '—';
-        this.drawText(ctx, displayValue, x + width / 2, y + 52, {
-            size: 24,
-            weight: 'bold',
-            color: value > 0 ? this.colors.text.primary : this.colors.text.muted,
-            align: 'center',
-            baseline: 'top'
-        });
-
-        // Label
-        this.drawText(ctx, label, x + width / 2, y + height - 16, {
-            size: 10,
-            weight: 'bold',
-            color: this.colors.text.secondary,
-            align: 'center',
-            baseline: 'top'
-        });
     }
 }
 
