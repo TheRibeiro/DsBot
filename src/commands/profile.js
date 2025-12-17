@@ -12,6 +12,7 @@
 
 const { AttachmentBuilder } = require('discord.js');
 const { ProfileCardGenerator } = require('../services/imageGenerator');
+const { getStatusMetricByPosition } = require('../utils/statsHelper');
 const { Logger } = require('../../logger');
 const mysql = require('mysql2/promise');
 
@@ -161,41 +162,16 @@ async function fetchUserData(discordId) {
         // Calcular rank
         const rank = calculateRank(safeMmr);
 
-        // Determinar Status baseado na posição
-        let statusLabel = 'KDA';
-        let statusValue = '0.0';
+        // Fallback de posição (garantir que existe)
+        const position = user.position || 'Fixo';
 
-        const position = user.position || 'Fixo'; // Fallback
+        // Determinar Status baseado na posição (usando helper robusto)
+        const statusMetric = getStatusMetricByPosition(position);
+        const statusLabel = statusMetric.label;
+        const statusValue = user[statusMetric.key] || 0;
 
-        switch (position) {
-            case 'Goleiro':
-                statusLabel = 'Defesas';
-                statusValue = user.total_defenses || 0;
-                break;
-            case 'Fixo':
-                statusLabel = 'Interceptações';
-                statusValue = user.total_intercepts || 0;
-                break;
-            case 'Ala Def':
-                statusLabel = 'Passes';
-                statusValue = user.total_passes || 0;
-                break;
-            case 'Ala Of':
-                statusLabel = 'Assistências';
-                statusValue = user.total_assists || 0;
-                break;
-            case 'Pivô':
-                statusLabel = 'Gols';
-                statusValue = user.total_goals || 0;
-                break;
-            default:
-                // Fallback genérico se posição for desconhecida ou null
-                statusLabel = 'Assistências';
-                statusValue = user.total_assists || 0;
-        }
-
-        // Se o valor for muito grande, formatar (ex: 1.2k) - opcional, por enquanto raw
-        // statusValue = formatNumber(statusValue);
+        // Formatar tag do time (fallback para 'FA' se sem time)
+        const teamTag = user.team_tag ? `[${user.team_tag}]` : '[FA]';
 
         Logger.info(`📈 Stats processados:`);
         Logger.info(`   - Position: ${position}`);
@@ -205,7 +181,7 @@ async function fetchUserData(discordId) {
             id: user.id,
             nickname: user.nickname,
             discord_id: user.discord_id,
-            teamTag: user.team_tag ? `[${user.team_tag}]` : '',
+            teamTag: teamTag,
             mmr: safeMmr,
             rank,
             wins: safeWins,

@@ -49,6 +49,7 @@ class ProfileCardGenerator {
     constructor() {
         this.browser = null;
         this.templatePath = path.join(__dirname, '../templates/profile-card.html');
+        this.logoPath = path.join(__dirname, '../../logo.jpg');
     }
 
     /**
@@ -113,11 +114,19 @@ class ProfileCardGenerator {
         const tierColors = TIER_COLORS[rank.tier] || TIER_COLORS['BRONZE'];
         const roleIcon = ROLE_ICONS[mainRole] || '⚽';
 
-        // Ler template
-        let html = await fs.readFile(this.templatePath, 'utf-8');
+        // Ler template e logo
+        let [html, logoBuffer] = await Promise.all([
+            fs.readFile(this.templatePath, 'utf-8'),
+            fs.readFile(this.logoPath).catch(() => null) // Fallback seguro se não existir
+        ]);
+
+        const logoBase64 = logoBuffer
+            ? `data:image/jpeg;base64,${logoBuffer.toString('base64')}`
+            : ''; // Se falhar, o img src vazio ou estilo de fallback será usado
 
         // Substituir placeholders
         html = html
+            .replace(/{{BRAND_LOGO_BASE64}}/g, logoBase64)
             .replace(/{{AVATAR_URL}}/g, avatarUrl)
             .replace(/{{USERNAME}}/g, username)
             .replace(/{{DISCRIMINATOR}}/g, discriminator || '')
